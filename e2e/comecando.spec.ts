@@ -196,6 +196,9 @@ test('começar a usar: primeiro uso, 30 alunos de uma planilha, chamada, convite
   await expect(resumo.nth(2)).toHaveText('1 professor, 1 convite para mandar')
   await expect(resumo.nth(3)).toHaveText('4 turmas na semana')
   await expect(resumo.nth(4)).toHaveText('30 alunos')
+  // a página pública e o app do aluno começam desligados, e o fim do guia diz onde ligar
+  await expect(resumo.nth(5)).toHaveText('desligada; ligue em Mais, Estúdio, quando quiser')
+  await expect(resumo.nth(6)).toHaveText('desligado; ligue em Mais, Estúdio, quando quiser')
   await guia.tocar(page.getByRole('button', { name: 'Ir para a agenda' }))
   toques['primeiro uso (do Começar à agenda, sem a importação)'] = guia.toques
 

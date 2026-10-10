@@ -464,6 +464,9 @@ function PassoFim() {
     ['Professores', `${plural(r.professores, 'professor', 'professores')}${r.convitesPendentes ? `, ${plural(r.convitesPendentes, 'convite para mandar', 'convites para mandar')}` : ''}`],
     ['Turmas', plural(r.turmas, 'turma na semana', 'turmas na semana')],
     ['Alunos', plural(alunos, 'aluno', 'alunos')],
+    // os dois começam desligados: quem chega ao fim do guia fica sabendo onde ligar
+    ['Página de aula experimental', v.configuracao.paginaExperimental ? 'ligada' : 'desligada; ligue em Mais, Estúdio, quando quiser'],
+    ['App do aluno', v.configuracao.acessoDoAluno ? 'ligado' : 'desligado; ligue em Mais, Estúdio, quando quiser'],
   ]
   const naPrevia = previa.value
   return (
