@@ -49,7 +49,7 @@ test.describe('login: o que o Firebase respondeu, em português', () => {
     await expect(alerta(page)).toHaveText(/ainda não foi ativado no Firebase/)
   })
 
-  test('método desligado, sem rede, tentativas demais, domínio e senha fraca: cada um com a sua frase', async ({ page }) => {
+  test('método desligado, sem rede, tentativas demais, e-mail inválido e senha fraca: cada um com a sua frase', async ({ page }) => {
     await abrirLogin(page)
     await preencherLogin(page, CONTAS.professor.email)
     const entrar = page.locator('form').getByRole('button', { name: 'Entrar', exact: true })
@@ -86,6 +86,44 @@ test.describe('login: o que o Firebase respondeu, em português', () => {
     await criar.click()
     await expect(alerta(page)).toHaveText(/Não deu para criar a conta com este e-mail\. Se você já tem conta/)
     await expect(alerta(page)).not.toContainText(/já (está em uso|existe|cadastrad)/)
+  })
+
+  test('chave do projeto restrita a outro site e domínio fora da lista do Firebase: cada um com a sua frase', async ({ page }) => {
+    await abrirLogin(page)
+    await preencherLogin(page, CONTAS.professor.email)
+    // a chave de API restrita por site (Google Cloud) sem este endereço: a API responde 403 com o
+    // texto do próprio Google, que o SDK transforma em "auth/requests-from-referer-..."
+    const bloqueado = `Requests from referer ${new URL(page.url()).origin}/ are blocked.`
+    await page.route(`${API}accounts:signInWithPassword*`, (rota) =>
+      rota.fulfill({
+        status: 403,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          error: {
+            code: 403,
+            message: bloqueado,
+            errors: [{ message: bloqueado, domain: 'global', reason: 'forbidden' }],
+            status: 'PERMISSION_DENIED',
+            details: [{ '@type': 'type.googleapis.com/google.rpc.ErrorInfo', reason: 'API_KEY_HTTP_REFERRER_BLOCKED' }],
+          },
+        }),
+      }),
+    )
+    await page.locator('form').getByRole('button', { name: 'Entrar', exact: true }).click()
+    await expect(alerta(page)).toHaveText(/A chave do projeto Firebase não vale para este site/)
+    await expect(alerta(page)).not.toContainText('auth/')
+    await page.getByRole('button', { name: 'Detalhes' }).click()
+    await expect(page.locator('.erro-detalhe')).toContainText('auth/requests-from-referer')
+    await page.unroute(`${API}accounts:signInWithPassword*`)
+
+    // o endereço do site fora de "Domínios autorizados" (o Firebase recusa o pedido do e-mail)
+    await page.route(`${API}accounts:sendOobCode*`, (rota) => rota.fulfill(respostaDeErro('UNAUTHORIZED_DOMAIN : Domain not allowlisted by project')))
+    await page.getByRole('button', { name: 'Esqueci a senha' }).click()
+    await esperarFolhaParada(page)
+    await folha(page).getByLabel('E-mail').fill(CONTAS.professor.email)
+    await folha(page).getByRole('button', { name: 'Enviar o link' }).click()
+    await expect(folha(page).getByRole('alert')).toHaveText(/Este endereço do site não está autorizado no Firebase/)
+    await expect(folha(page).getByRole('alert')).not.toContainText('auth/')
   })
 
   test('a força da senha aparece ao criar a conta, sem exigir símbolo', async ({ page }) => {
