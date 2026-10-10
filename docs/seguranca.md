@@ -10,13 +10,14 @@ cada leitura e gravação. A tela só esconde o que o banco já nega.
 | Risco | O que segura | Onde |
 |---|---|---|
 | Alguém lê ou grava o que não é do papel dele | regras do Firestore com menor privilégio, esquema e tamanho em tudo, o resto negado | `firestore.rules`, `testes-de-regras/` |
+| Professor mexendo fora da unidade dele ou dando reposição sem falta | a aula que ele cria é de uma turma da unidade que o documento diz; o crédito que ele cria é o de um "avisou" no mesmo lote, e só sai junto com o "avisou"; usar e devolver crédito só junto com o encaixe | `turmaDaUnidade`, `creditoDoAvisoDaEquipe`, `usoConfereComOEncaixe` |
 | Conta sem convite entra no estúdio | o papel vem de `acessos/{uid}` criado a partir de um convite para o e-mail confirmado | regras de `acessos` e `convites` |
 | Convite esquecido vira porta aberta | todo convite nasce com prazo (`expiraEm`, 7 dias por padrão, configurável de 1 a 90) e o aceite depois dele é recusado; a administração revoga ou manda de novo | `conviteValido`, `conviteNoPrazo`, Mais, Equipe |
 | Ninguém sabe o que aconteceu no login | cada resposta do Firebase vira uma frase em português; o código bruto fica atrás de "Detalhes" | `src/dados/firebase/erros.ts` |
 | Descobrir quem é aluno tentando e-mails | mensagens iguais com ou sem conta; proteção contra enumeração do Firebase (console) | `erros.ts`, `docs/firebase.md` |
 | Senha fraca | mínimo 8 no app e na política do projeto (console); força da senha enquanto digita | `src/dominio/senha.ts` |
 | Celular emprestado | "Lembrar neste aparelho" desligado deixa a sessão só na aba | `autenticacao.ts` (persistência) |
-| Script injetado, HTML por texto | política de segurança sem `unsafe-inline`, sem iframe; Trusted Types com política padrão que recusa HTML e script por texto | `scripts/plugin-offline.ts`, `src/app/confianca.ts` |
+| Script injetado, HTML por texto | política de segurança sem `unsafe-inline`, sem iframe (com o App Check, só o do reCAPTCHA); Trusted Types com política padrão que recusa HTML e script por texto | `scripts/plugin-offline.ts`, `src/app/confianca.ts` |
 | Dado pessoal vazando pela URL ou pelo referrer | nada pessoal na URL (só códigos nas rotas); `referrer` `strict-origin-when-cross-origin` | `index.html` e as outras duas páginas |
 | Dado do banco guardado no aparelho | o service worker só guarda arquivos do próprio site; a leitura da página pública fica na aba por dez minutos, nunca no cache do SW | `src/pwa/sw.js`, `src/experimental/dados.ts` |
 | Versão velha do app com regras novas | a versão nova fica esperando e o app avisa "Tem uma versão nova do app" com "Atualizar" | `src/app/atualizacao.ts` |
@@ -98,7 +99,8 @@ documento:
   primeiro nome, a unidade e as turmas fixas, sem colegas.
 - `registros/{aula}` leva também quem vem fazer a aula experimental (nome e telefone, em texto):
   só a equipe lê; o aluno, que mexe no mesmo documento por mescla, não cria nem muda esse mapa
-  (as regras recusam), e as cópias sem nome (vagas, página pública) só contam o lugar.
+  (as regras recusam), e as cópias sem nome (vagas, página pública) só contam o lugar. Quem
+  virou aluno e depois pediu a exclusão fica ali só com o código (ver "O que fica de fora").
 - `vagas/{aula}`: a aula de uma data só com lugares (capacidade, ocupados, cancelada) e o início
   da aula em milissegundos (`comecaEm`, conferido pelas regras contra a data e a hora), sem nomes.
 - `publico/estudio`: o único documento sem login, só com o que a página mostra: nome do estúdio,
@@ -138,6 +140,27 @@ transação refaz a conta e recusa. As regras conferem tudo de novo, do lado do 
   sai, então o aviso de uma falta já reposta não se desfaz);
 - o aluno não se encaixa numa aula da própria turma, onde já tem lugar.
 
+## O que o professor grava
+
+O professor faz a chamada, avisa e encaixa nas unidades em que dá aula. As regras conferem que:
+
+- a aula que ele cria (registro ou vaga) é de uma turma daquela unidade (`turmaDaUnidade`). Sem
+  isso, o professor de uma unidade criava o registro ou a vaga de uma aula de outra com a unidade
+  dele, e o documento ficava travado: a unidade não muda depois, o registro não se apaga, o
+  professor certo não fazia a chamada e a conferência da janela de vagas da administração
+  passava a ser recusada inteira;
+- o crédito que ele cria é o do aviso de verdade (`creditoDoAvisoDaEquipe`): o aluno está como
+  "avisou" no registro da aula de origem depois do lote, o código é o fixo daquela falta, a
+  unidade é a da aula, nasce livre e vale no máximo os dias combinados. Antes, um "crédito de
+  aviso" para qualquer aluno, sem falta e válido até 2099 passava (uma cortesia com outro nome);
+- usar e devolver crédito vai junto com o encaixe (`usoConfereComOEncaixe`): marcar como usado só
+  com o aluno na reposição daquela aula, devolver só tirando a reposição de lá;
+- o crédito do aviso só sai junto com o "avisou" (a pessoa veio afinal, ou o aviso foi desfeito):
+  apagar e deixar o aviso lá tirava a reposição do aluno.
+
+A administração não passa por essas conferências: ela grava turmas e vagas novas no mesmo lote, e
+uma leitura por turma estouraria o teto de leituras por lote (abaixo).
+
 ### Teto de expressões
 
 O Firestore avalia no máximo 1000 expressões por pedido. As regras do registro escrito pelo aluno
@@ -146,10 +169,30 @@ registro do aluno tem a própria validação, a situação na aula é lida do pr
 reler o registro), o crédito é lido uma vez e o instante da aula vem pronto na vaga.
 `testes-de-regras/folga.test.ts` carrega as regras com comparações a mais enfiadas na função de
 cada caminho e prova que o pedido legítimo ainda passa com pelo menos 40 de sobra; com
-`MEDIR_FOLGA=arquivo` ele procura o ponto exato em que cada caminho estoura (medido: de 51, no
-encaixe numa aula que já tem registro de outra pessoa, a 110, na vaga do aviso). Passando do teto, o
+`MEDIR_FOLGA=arquivo` ele procura o ponto exato em que cada caminho estoura (medido de novo na
+revisão adversarial, com as regras antes e depois dela, os mesmos números: de 50, no encaixe numa
+aula que já tem registro de outra pessoa, a 110, na vaga do aviso). Passando do teto, o
 pedido é recusado (erro para o lado seguro), mas o aluno ficaria sem remarcar: quem mexer nas
 regras do aluno roda o teste e, se precisar, mede de novo (ver [roteiro.md](roteiro.md)).
+
+### Teto de leituras (o emulador não confere)
+
+Cada pedido pode ler no máximo 10 documentos diferentes com `get`, `exists` e `getAfter` (20 num
+lote ou transação); leitura repetida do mesmo documento não conta de novo. **O emulador não impõe
+esse teto** (conferido: uma regra com 11 leituras diferentes num documento e um lote de 30 com uma
+leitura diferente em cada passam no emulador), então os testes não pegam quem passar dele; no
+projeto de verdade o pedido seria recusado. Contagem feita à mão, por documento diferente:
+
+- aluno: avisar e desfazer o aviso leem no máximo 9 documentos diferentes no lote (acesso,
+  cadastro, configuração, vaga antes e depois, turma, registro antes e depois, crédito depois), o
+  encaixe 10 (mais o crédito antes) e a desistência 7; nenhuma gravação passa de 7 sozinha;
+- equipe: quem pede (acesso e cadastro), a posse quando a regra pergunta pelo titular, e no
+  convite o cadastro convidado e a configuração; o professor lê também a turma da aula que cria
+  e, no crédito, o registro da aula de origem e a configuração;
+- a conferência da janela de vagas do professor vai em lotes de no máximo 12 turmas
+  (`lotesDeVagas` em `src/dados/firebase/repositorioDaEquipe.ts`): cada turma nova é uma leitura.
+
+Regra nova que lê documento: conte de novo antes de publicar.
 
 ## Esquema e tamanho
 
@@ -172,7 +215,11 @@ não está nas regras é negado.
   `scripts/plugin-offline.ts`, com teste). Sem Google Analytics, sem fontes ou scripts de terceiros.
 - Trusted Types (`require-trusted-types-for 'script'` e `trusted-types default`): o app instala
   uma política padrão (`src/app/confianca.ts`) que recusa HTML e script por texto e só aceita
-  script por endereço para o service worker do próprio site (e o reCAPTCHA, com o App Check). O
+  script por endereço para o service worker do próprio site (e o reCAPTCHA, com o App Check).
+  Com o App Check ligado, a política também deixa existir a política do próprio reCAPTCHA
+  (`goog#html`): sem ela, o script do Google caía na política padrão, que recusa HTML por texto,
+  quebrava, e o App Check ficava sem token fora de `localhost` (achado na revisão adversarial,
+  com o script de verdade do reCAPTCHA e o Firebase simulado). O
   endereço chega à política como foi escrito no código (o service worker é registrado por um
   caminho relativo), então ela o resolve contra a página antes de comparar. Conferido nos dois
   motores dos testes (Chromium e o WebKit do Playwright 1.60); um motor sem Trusted Types ignora a
@@ -215,21 +262,25 @@ O app não consegue conferir nem mudar nada disto; a lista de verificação com 
 [firebase.md](firebase.md):
 
 - Authentication iniciado ("Começar"): sem isso a criação de conta falha e nenhum e-mail chega.
-- E-mail/senha ligado; domínio `kohijow.github.io` autorizado; modelos de e-mail em português.
+- E-mail/senha ligado; domínios `kohijow.github.io` e `pilates-central.github.io` autorizados;
+  modelos de e-mail em português.
 - Proteção contra enumeração de e-mails ligada; política de senha com mínimo 8.
 - Regras publicadas com o e-mail do primeiro acesso trocado (e republicadas a cada mudança no
   arquivo).
 - Chave de API restrita por site e por API no Google Cloud.
-- App Check registrado e, depois das métricas, imposto.
+- App Check: as chaves do reCAPTCHA v3 criadas no console do reCAPTCHA (não no Firebase), a
+  secreta no App Check do Firebase e a do site na variável do GitHub; imposto só depois das
+  métricas "verificadas".
 - Mais de uma pessoa como membro do projeto.
 
 ## Tentativas de escalada testadas
 
-`npm run regras` roda 266 testes no emulador, cada papel contra cada coleção, permitindo e negando
+`npm run regras` roda 282 testes no emulador, cada papel contra cada coleção, permitindo e negando
 (`testes-de-regras/regras.test.ts`), as tentativas das revisões de segurança
 (`testes-de-regras/ataques.test.ts`), a folga do teto de expressões (`folga.test.ts`), as aulas
-experimentais no registro (`experimentais.test.ts`), os textos do estúdio (`estudio.test.ts`) e o
-prazo dos convites (`convites.test.ts`). Entre eles:
+experimentais no registro (`experimentais.test.ts`), os textos do estúdio (`estudio.test.ts`), o
+prazo dos convites (`convites.test.ts`) e o que o professor grava (`equipe-por-unidade.test.ts`).
+Entre eles:
 
 - professor lendo `pagamentos`, `financeiroDosAlunos` ou `auditoria`; professor marcando presença
   em outra unidade, cancelando aula ou dando crédito de cortesia;
@@ -260,8 +311,12 @@ prazo dos convites (`convites.test.ts`). Entre eles:
   quebra de linha), a 11a pessoa na mesma aula; professor de outra unidade registrando;
 - textos do estúdio fora dos tetos ou com o separador, link do mapa sem `https://` ou com script,
   Instagram com espaço ou arroba, professor mexendo nos textos da página pública;
-- administrador convidando, promovendo ou desativando administrador; mexendo no cadastro do
-  titular; titular se desativando;
+- administrador convidando, promovendo ou desativando administrador, ou revogando o convite de
+  administração que o titular fez; mexendo no cadastro do titular; titular se desativando;
+- professor criando o registro ou a vaga de uma aula de outra unidade (dizendo que é da dele) ou de
+  turma que não existe; criando crédito sem o aluno ter avisado, com código inventado, validade
+  além da combinada, já usado ou como cortesia; marcando crédito como usado sem pôr o aluno na
+  aula, devolvendo crédito usado sem tirar a reposição, ou apagando o crédito e deixando o aviso;
 - mudar o e-mail de quem já entrou (é ele que liga a conta ao papel);
 - administrador tentando tomar o convite de administração feito pelo titular (trocando o e-mail,
   reescrevendo o convite ou criando um cadastro de aluno com o mesmo código);
@@ -316,7 +371,9 @@ prazo dos convites (`convites.test.ts`). Entre eles:
   texto, de propósito (é o convite); o link em si (`?entrar`) não leva nada pessoal.
 - **Exclusão de aluno:** apaga cadastro, mensalidade, portal, convite, créditos, as marcações
   futuras, a observação dos pagamentos e o documento que liga a conta de login ao cadastro
-  (`acessos/{uid}`, com o e-mail); presenças antigas, pagamentos e a linha do registro de
+  (`acessos/{uid}`, com o e-mail); se o cadastro nasceu de uma aula experimental, o nome e o
+  telefone guardados no registro daquela aula dão lugar a "Aluno removido" (procurados até 120
+  dias antes do cadastro); presenças antigas, pagamentos e a linha do registro de
   alterações ficam só com o código do aluno (o caixa precisa fechar). A conta de login do aluno,
   se existir, continua no Firebase Authentication sem papel nenhum; apagar a conta é pelo console
   (ver [firebase.md](firebase.md)).
@@ -327,3 +384,9 @@ prazo dos convites (`convites.test.ts`). Entre eles:
   Safari antigo não); o resto da política vale igual.
 - **App Check:** o código está pronto, mas só protege depois que o dono registra o site e impõe no
   console; até lá a cota do plano gratuito segue exposta.
+- **Quem veio só experimentar** (e não virou aluno) fica no registro daquela aula com nome e
+  telefone; depois que a aula termina, o app não tem como tirar (antes dela, "Tirar"). Um pedido de
+  exclusão dessa pessoa hoje é atendido pelo console (Firestore, o documento `registros/<turma>_<data>`,
+  campo `experimentais`).
+- **Teto de leituras das regras:** o emulador não confere (ver "Teto de leituras"); a contagem
+  é manual.

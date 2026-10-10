@@ -33,8 +33,11 @@ verdade) e **Ver demonstração**.
 3. Authentication, Configurações:
    - **Domínios autorizados:** acrescente `kohijow.github.io` (onde o site está publicado hoje)
      e `pilates-central.github.io` (o endereço definitivo, quando o repositório passar para a
-     organização do estúdio). O `localhost` já vem na lista. Domínio que falta aqui aparece no
-     app como "Este endereço do site não está autorizado no Firebase".
+     organização do estúdio). O `localhost` já vem na lista. Hoje o login por e-mail e senha
+     não depende dessa lista (o app não usa login do Google nem link de volta nos e-mails), mas
+     ela vale para o que vier depois; se o Firebase recusar o endereço, o app mostra "Este
+     endereço do site não está autorizado no Firebase". Quem barra o uso da configuração em
+     outro site é a restrição da chave (passo 4 da seção 5).
    - **Ações do usuário:**
      - "Ativar a criação (registro)" fica ligada: quem é convidado cria a própria conta. Quem não
        tem convite até cria uma conta, mas não vê nada (as regras do banco negam).
@@ -131,26 +134,41 @@ diária de leituras. O App Check faz o Firebase só atender pedidos vindos do si
 conferidos pelo reCAPTCHA v3 (invisível para quem usa). O app já tem o suporte pronto, desligado
 até existir a chave. Tudo abaixo é feito por quem cuida do projeto; nada disso roda nos testes.
 
-1. No console, **App Check**, aba Apps, toque no app Web e escolha **reCAPTCHA v3**. Registre o
-   site com os dois domínios, `kohijow.github.io` e `pilates-central.github.io` (o reCAPTCHA
-   aceita vários no mesmo registro). O console mostra a **chave do site** (site key); a chave
-   secreta fica com o Google.
-2. GitHub, Settings, Secrets and variables, Actions, aba Variables: crie
-   `FIREBASE_APPCHECK_SITE_KEY` com a chave do site. A próxima publicação sai com o App Check
+1. **As duas chaves do reCAPTCHA v3** saem do console do reCAPTCHA, não do Firebase: abra
+   `https://www.google.com/recaptcha/admin/create` com a mesma conta Google do projeto. Rótulo:
+   o nome do estúdio. Tipo: **Baseado em pontuação (v3)**. Domínios: `kohijow.github.io` e
+   `pilates-central.github.io` (só o nome, sem `https://` nem caminho). Aceite os termos e
+   envie. A página mostra a **chave do site** (vai para o site) e a **chave secreta** (vai para
+   o Firebase). O `localhost` não precisa entrar: no computador vale o token de depuração
+   (passo 6).
+2. No console do Firebase, **App Check**, aba Apps, toque no app Web, escolha **reCAPTCHA** e
+   cole a **chave secreta**. Deixe a validade do token como vem (1 dia) e salve.
+3. GitHub, Settings, Secrets and variables, Actions, aba Variables: crie
+   `FIREBASE_APPCHECK_SITE_KEY` com a **chave do site**. A próxima publicação sai com o App Check
    ligado: a política de segurança do site passa a liberar só os endereços do reCAPTCHA e do App
-   Check, e o rodapé do login e da página pública ganham a frase de aviso que o Google exige.
-3. Abra o site publicado, entre e abra a página de aula experimental. No console, App Check, aba
+   Check (e a política do reCAPTCHA no Trusted Types), e o rodapé do login e da página pública
+   ganham a frase de aviso que o Google exige.
+4. Abra o site publicado, entre e abra a página de aula experimental. No console, App Check, aba
    **Métricas**, os pedidos devem aparecer como "verificados". Espere um ou dois dias de uso
-   normal assim.
-4. Só então **imponha** (Enforce): App Check, aba APIs, **Cloud Firestore**, Impor; e
+   normal assim. Se aparecerem como "não verificados" ou "inválidos", não imponha: confira se a
+   chave do site no GitHub é a par da chave secreta colada no Firebase e se os dois domínios
+   estão no reCAPTCHA.
+5. Só então **imponha** (Enforce): App Check, aba APIs, **Cloud Firestore**, Impor; e
    **Authentication**, Impor. A partir daí, pedido sem token válido é recusado pelo Google, antes
    de chegar às regras.
-5. Para usar o site no computador com o projeto real (`npm run build` com `.env.production.local`
+6. Para usar o site no computador com o projeto real (`npm run build` com `.env.production.local`
    preenchido, depois `npm run preview`), o app pede um **token de depuração**: em `localhost` ele
    liga o modo de depuração do SDK, que escreve o token no console do navegador (F12) na primeira
    abertura. Registre esse token em App Check, aba Apps, menu do app Web, **Gerenciar tokens de
    depuração**. Sem isso, com o App Check imposto, o site local é recusado (o site publicado
    continua funcionando). Com os emuladores (`?emulador=1`) o App Check fica desligado.
+
+Conferido sem o projeto real (os pedidos ao Firebase respondidos pelo teste; só o script público
+do reCAPTCHA veio do Google): com uma chave de teste no build e o token de depuração, o SDK troca
+o token e o login e a leitura da página pública saem com o cabeçalho `X-Firebase-AppCheck`, nos
+dois motores; o script de verdade do reCAPTCHA carrega sem recusa da política de segurança nem do
+Trusted Types. Sem a chave, nada disso liga (nenhum pedido ao reCAPTCHA nem ao App Check). O que
+só dá para ver com a chave verdadeira é o passo 4: as métricas "verificadas".
 
 Se algo der errado depois de impor (a página pública sem horários, o login recusando com
 `auth/firebase-app-check-token-is-invalid` em Detalhes), volte em App Check, APIs, e troque
@@ -226,8 +244,9 @@ console do Firebase, salvo onde diz Google Cloud ou GitHub.
 - [ ] **Variáveis no GitHub** (Settings, Secrets and variables, Actions, Variables): as seis
       `FIREBASE_*` e, com o App Check, `FIREBASE_APPCHECK_SITE_KEY`; o último workflow da `main`
       passou e publicou.
-- [ ] **App Check** (seção 7): app Web registrado com reCAPTCHA v3 nos dois domínios; depois de
-      um ou dois dias de métricas "verificadas", Firestore e Authentication com "Impor".
+- [ ] **App Check** (seção 7): chaves do reCAPTCHA v3 criadas no console do reCAPTCHA com os
+      dois domínios; a secreta no App Check do Firebase, a do site em `FIREBASE_APPCHECK_SITE_KEY`;
+      depois de um ou dois dias de métricas "verificadas", Firestore e Authentication com "Impor".
 - [ ] **Membros do projeto**: Configurações do projeto, Usuários e permissões, mais de uma pessoa
       como Proprietário ou Editor.
 

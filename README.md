@@ -507,14 +507,18 @@ Resumo; o detalhe está em [docs/seguranca.md](docs/seguranca.md).
 
 - Sem servidor próprio: o site é estático (GitHub Pages) e os dados do estúdio ficam no Firestore,
   protegidos por [regras](firestore.rules) com menor privilégio, esquema e tamanho em tudo (as
-  listas conferidas item a item) e o resto negado. 266 testes no emulador cobrem cada papel em
+  listas conferidas item a item) e o resto negado. 282 testes no emulador cobrem cada papel em
   cada coleção e as tentativas de escalada (professor lendo pagamentos, aluno lendo outro aluno,
   aluno em aula cheia, crédito usado duas vezes, convite forjado, vencido ou revogado, e-mail não
   confirmado, aluno mexendo em quem vem fazer a aula experimental, mexer na posse do estúdio,
   mexer no registro de alterações), e um teste prova a folga do teto de expressões em cada
   caminho do aluno. Uma revisão de segurança tentou quebrar as regras como cada
   papel e como anônimo; o que passou (desfazer o aviso ficando com a reposição, repor na própria
-  turma, ler a posse sem ser da equipe) virou teste e correção.
+  turma, ler a posse sem ser da equipe) virou teste e correção. A revisão adversarial seguinte
+  achou o professor criando o registro ou a vaga de uma aula de outra unidade (o documento
+  ficava travado com a unidade errada), dando "crédito de aviso" sem falta, apagando o crédito
+  de quem avisou e devolvendo crédito usado sem desfazer o encaixe, e a administração que não é
+  titular revogando convite de administração: as regras agora recusam, com teste.
 - O papel vem de convite para o e-mail confirmado; desativar alguém corta o acesso na hora. Todo
   convite tem prazo (7 dias por padrão, configurável), conferido pelas regras no aceite; a
   administração revoga ou manda de novo. O link do convite não leva nada pessoal.
@@ -523,7 +527,8 @@ Resumo; o detalhe está em [docs/seguranca.md](docs/seguranca.md).
   senha ligado, domínio autorizado, proteção contra enumeração, política de senha, chave de API
   restrita, App Check) está numa lista de verificação em [docs/firebase.md](docs/firebase.md).
 - Política de segurança de conteúdo em todas as páginas: scripts, estilos, fontes e imagens só do
-  próprio site, sem `unsafe-inline` em script, sem iframe; conexões só com o próprio site e, com
+  próprio site, sem `unsafe-inline` em script, sem iframe (com o App Check, só o do reCAPTCHA);
+  conexões só com o próprio site e, com
   projeto, com o login e o Firestore; Trusted Types com uma política padrão que recusa HTML por
   texto (conferido no Chromium e no WebKit dos testes; motor antigo ignora a diretiva); referrer
   só com a origem. Sem Google Analytics, sem rastreamento. Nenhum
@@ -531,6 +536,9 @@ Resumo; o detalhe está em [docs/seguranca.md](docs/seguranca.md).
   mostrar.
 - App Check (reCAPTCHA v3) pronto atrás de uma variável: liga só com a chave do site, protege a
   cota do plano gratuito e o login contra uso automatizado; ligar e impor é passo do console.
+  Conferido com uma chave de teste e o Firebase simulado: login e página pública saem com o token,
+  e o script de verdade do reCAPTCHA convive com a política de segurança e o Trusted Types (antes
+  ele quebrava na política padrão, e o App Check ficaria sem token no site publicado).
 - Service worker só com arquivos do próprio site (nada do login nem do banco no cache); a versão
   nova espera a pessoa tocar em "Atualizar".
 - Registro de alterações: quem lançou ou apagou pagamento, excluiu cadastro, mudou acesso ou
@@ -544,8 +552,8 @@ Resumo; o detalhe está em [docs/seguranca.md](docs/seguranca.md).
   começo ganham um apóstrofo).
 - LGPD: [aviso de privacidade](https://pilates-central.github.io/privacidade/),
   exportação dos dados de um aluno e exclusão com confirmação (o cadastro, o acesso ao app, os
-  créditos e a observação dos pagamentos saem; fica só o código; a conta de login é apagada no
-  console).
+  créditos, a observação dos pagamentos e, para quem veio de uma aula experimental, o nome e o
+  telefone daquela aula saem; fica só o código; a conta de login é apagada no console).
 
 ## Estrutura
 
@@ -600,7 +608,10 @@ da equipe em texto), estados vazios que levam à ação e gravação que diz o q
 ou com a recusa do banco, conferidos como quem usa, com os emuladores. Uma revisão de produto e
 celular do primeiro dia usou o app como a proprietária num estúdio vazio, com uma planilha cheia de
 erros de propósito, e fez a importação ler a planilha como ela vem, a ajuda do iPhone seguir o
-Safari de agora e o fim do guia dizer o que começa desligado. Detalhes e o que falta em
+Safari de agora e o fim do guia dizer o que começa desligado. Ao mesmo tempo, uma revisão
+adversarial de segurança atacou as regras de novo como cada papel e fechou o professor mexendo
+fora da unidade dele e no crédito dos alunos, o reCAPTCHA que quebraria com o App Check ligado e o
+nome de quem veio de aula experimental ficando depois da exclusão. Detalhes e o que falta em
 [docs/roteiro.md](docs/roteiro.md).
 
 ## Créditos
