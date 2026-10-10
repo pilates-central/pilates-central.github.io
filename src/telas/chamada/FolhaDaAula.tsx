@@ -363,7 +363,7 @@ function ExperimentalNaChamada({ aula, participante: p, indice, papel }: Omit<Pr
       </div>
       {virouAluno ? (
         <p class="texto-secundario">Virou aluno: {primeiroNome(virouAluno.nome)} já está no cadastro.</p>
-      ) : (
+      ) : experimental?.alunoId ? null /* virou aluno e o cadastro foi excluído depois: fica só o código */ : (
         pode(papel, 'editar-alunos') && (
           <Botao variante="terciario" icone="adicionar" onClick={cadastrar}>
             Cadastrar como aluno

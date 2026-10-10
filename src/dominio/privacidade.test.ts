@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { montarAula } from './agenda'
 import { credito, registro, turma } from './apoio-de-teste'
-import { dadosDoAluno, exclusaoDoAluno, nomeDoArquivoDeDados } from './privacidade'
+import { dadosDoAluno, exclusaoDoAluno, NOME_DE_QUEM_SAIU, nomeDoArquivoDeDados } from './privacidade'
 import type { Aluno, Pagamento } from './tipos'
 
 const aluno: Aluno = {
@@ -75,5 +75,26 @@ describe('excluir o aluno', () => {
     expect(e.registros[0]?.marcacoes).toEqual({ a2: 'avisou' })
     expect(e.registros[1]?.reposicoes).toEqual({})
     expect(e.creditosRemovidos).toEqual(['cr-1'])
+  })
+
+  it('a aula experimental de onde o cadastro nasceu fica só com o código, mesmo no passado', () => {
+    const experimental = registro({
+      turmaId: 't1',
+      data: '2026-08-20',
+      marcacoes: { 'x-1': 'presente', 'x-2': 'presente' },
+      experimentais: {
+        'x-1': { nome: 'Lúcia Gonçalves', telefone: '5511900000012', alunoId: 'a1' },
+        'x-2': { nome: 'Outra Pessoa', telefone: '5511900000013' },
+      },
+    })
+    const e = exclusaoDoAluno('a1', [], [experimental], [], '2026-10-09', 'agora')
+    expect(e.registros).toHaveLength(1)
+    expect(e.registros[0]?.experimentais).toEqual({
+      'x-1': { nome: NOME_DE_QUEM_SAIU, telefone: '', alunoId: 'a1' },
+      'x-2': { nome: 'Outra Pessoa', telefone: '5511900000013' },
+    })
+    // a presença daquela aula fica (o histórico conta), só sem o nome e o telefone
+    expect(e.registros[0]?.marcacoes).toEqual({ 'x-1': 'presente', 'x-2': 'presente' })
+    expect(JSON.stringify(e.registros)).not.toMatch(/Lúcia|5511900000012/)
   })
 })

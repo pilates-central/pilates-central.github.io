@@ -27,10 +27,11 @@ import { colocarNaTurma, editarTurma, encerrarTurma, lugaresReservados, novaTurm
 import type { RascunhoTurma } from '../dominio/turmas'
 import { desativarUnidade, montarUnidade, validarUnidade } from '../dominio/unidades'
 import type { RascunhoUnidade } from '../dominio/unidades'
+import { somarDias } from '../dominio/datas'
 import { exclusaoDoAluno } from '../dominio/privacidade'
 import { vincularAluno } from '../dominio/aulaExperimental'
 import { ehEmailValido } from '../dominio/texto'
-import { alunosPorId, base, creditos, equipePorId, financeiro, gravarComDesfazer, pagamentos, registros } from './estado'
+import { alunosPorId, base, creditos, equipePorId, financeiro, garantirIntervalo, gravarComDesfazer, pagamentos, registros } from './estado'
 
 type ComDesfazer = { desfazer?: () => Promise<void> }
 
@@ -51,6 +52,9 @@ function primeiroErro(erros: ErrosDeCampo): string {
 function anotar(acao: AcaoAuditada, alvoId: Id, detalhe = '', porId = quemEstaAgindo.peek()?.id ?? ''): RegistroDeAuditoria {
   return registroDeAuditoria(idNovo('au'), acao, porId, alvoId, agoraDoApp().toISOString(), detalhe)
 }
+
+/** Quantos dias antes do cadastro a exclusão procura a aula experimental de onde ele nasceu. */
+const DIAS_ANTES_DO_CADASTRO = 120
 
 const turmas = () => base.peek()?.turmas ?? []
 const turmaPorId = (id: Id) => turmas().find((t) => t.id === id)
@@ -161,6 +165,14 @@ export async function tirarAcessoDoAluno(alunoId: Id): Promise<Resultado<ComDesf
 export async function excluirAluno(alunoId: Id): Promise<Resultado<ComDesfazer>> {
   const aluno = alunosPorId.peek().get(alunoId)
   if (!aluno) return recusado('nada-a-fazer', 'Aluno não encontrado.')
+  // a aula experimental de onde o cadastro pode ter nascido fica antes dele: as aulas desde uns
+  // meses antes do cadastro entram na conta, para o nome e o telefone saírem de lá também
+  const dia = hoje.peek()
+  try {
+    await garantirIntervalo(somarDias(aluno.desde < dia ? aluno.desde : dia, -DIAS_ANTES_DO_CADASTRO), dia)
+  } catch {
+    return recusado('nada-a-fazer', 'Não deu para conferir o histórico do aluno agora. Confira a internet e tente de novo.')
+  }
   const e = exclusaoDoAluno(
     alunoId,
     turmas(),

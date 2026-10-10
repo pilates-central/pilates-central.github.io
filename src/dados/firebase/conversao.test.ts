@@ -79,6 +79,9 @@ describe('quem vem experimentar, no banco', () => {
     expect(decodificarExperimental('Joana Prado|5511900000077|a-novo')).toEqual({ ...joana, alunoId: 'a-novo' })
     // a barra no nome viraria outro campo: sai antes de gravar
     expect(codificarExperimental({ nome: 'Ana|Lima', telefone: '' })).toBe('Ana Lima|')
+    // depois da exclusão de quem virou aluno: sem telefone, só o código
+    expect(codificarExperimental({ nome: 'Aluno removido', telefone: '', alunoId: 'a-novo' })).toBe('Aluno removido||a-novo')
+    expect(decodificarExperimental('Aluno removido||a-novo')).toEqual({ nome: 'Aluno removido', telefone: '', alunoId: 'a-novo' })
     expect(decodificarExperimental('semtelefone')).toBeNull()
     expect(decodificarExperimental(7)).toBeNull()
   })

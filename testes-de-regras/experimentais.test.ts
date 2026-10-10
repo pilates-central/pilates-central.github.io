@@ -84,6 +84,11 @@ describe('o que o banco confere no mapa', () => {
   it('aceita o telefone vazio (pessoa sem WhatsApp) e o nome com acento', async () => {
     await assertSucceeds(setDoc(doc(como('adm'), `registros/${AULA}`), registroCom({ 'x-1': 'Joana Conceição|' })))
   })
+
+  it('a exclusão de quem virou aluno troca o nome e o telefone pelo texto fixo, sem telefone (como o app grava)', async () => {
+    await setDoc(doc(como('adm'), `registros/${AULA}`), registroCom({ 'x-1': `${JOANA}|a-novo` }))
+    await assertSucceeds(updateDoc(doc(como('adm'), `registros/${AULA}`), { 'experimentais.x-1': 'Aluno removido||a-novo', atualizadoEm: instante }))
+  })
 })
 
 describe('o aluno no mesmo documento', () => {

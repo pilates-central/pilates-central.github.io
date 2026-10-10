@@ -107,6 +107,37 @@ test.describe('aula experimental na agenda', () => {
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Juliana Prado')
   })
 
+  test('quem virou aluno e pediu a exclusão some também da aula experimental (fica só o código)', async ({ page }) => {
+    await abrirApp(page, '2026-10-10T08:45')
+    await page.getByRole('button', { name: 'Explorar como administração' }).click()
+    await page.getByRole('button', { name: 'Abrir chamada', exact: true }).click()
+    await esperarFolhaParada(page)
+    await linhaDe(page, 'Juliana Prado').getByRole('button', { name: 'Presente' }).click()
+    await linhaDe(page, 'Juliana Prado').getByRole('button', { name: 'Cadastrar como aluno' }).click()
+    await expect(folha(page)).toHaveCount(0)
+    await esperarParado(page, '.tela-quadro')
+    await page.getByRole('button', { name: 'Cadastrar aluno' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Juliana Prado')
+
+    await page.getByRole('button', { name: 'Excluir o cadastro' }).click()
+    await esperarFolhaParada(page)
+    await folha(page).getByRole('button', { name: 'Excluir de vez' }).click()
+    await expect(aviso(page, 'Cadastro de Juliana excluído.')).toBeVisible()
+
+    // na chamada do sábado a presença dela continua contando, sem o nome nem o WhatsApp
+    await irParaAba(page, 'Hoje')
+    await page.getByRole('button', { name: 'Abrir chamada', exact: true }).click()
+    await esperarFolhaParada(page)
+    await expect(folha(page).getByText('Juliana Prado')).toHaveCount(0)
+    await expect(linhaDe(page, 'Aluno removido')).toBeVisible()
+    await expect(linhaDe(page, 'Aluno removido').getByRole('link', { name: /WhatsApp/ })).toHaveCount(0)
+    await expect(linhaDe(page, 'Aluno removido').getByRole('button', { name: 'Cadastrar como aluno' })).toHaveCount(0)
+    await expect(linhaDe(page, 'Aluno removido').getByRole('button', { name: 'Presente' })).toHaveAttribute('aria-pressed', 'true')
+    const guardado = await page.evaluate(() => JSON.stringify(Object.fromEntries(Object.entries(localStorage))))
+    expect(guardado).not.toContain('Juliana')
+    expect(guardado).not.toContain('5511900000090')
+  })
+
   test('o professor registra pelo Hoje, escolhendo a aula com vaga', async ({ page }) => {
     await entrarComoProfessor(page)
     await page.getByRole('button', { name: 'Registrar aula experimental' }).click()

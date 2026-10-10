@@ -101,20 +101,28 @@ export function nomeDoArquivoDeDados(aluno: Aluno, hoje: DataISO): string {
 export interface Exclusao {
   /** turmas sem o aluno */
   turmas: Turma[]
-  /** aulas de hoje em diante sem o aluno (marcação e reposição) */
+  /**
+   * aulas de hoje em diante sem o aluno (marcação e reposição) e, em qualquer data, a aula
+   * experimental de onde o cadastro nasceu sem o nome e o telefone dele
+   */
   registros: RegistroAula[]
   creditosRemovidos: Id[]
 }
 
+/** O que fica no lugar do nome de quem foi excluído (o mesmo que a tela mostra para o aluno removido). */
+export const NOME_DE_QUEM_SAIU = 'Aluno removido'
+
 /**
  * O que muda quando o aluno é excluído: sai das turmas, das aulas que ainda vão acontecer e
  * perde os créditos. O histórico de aulas passadas e os pagamentos ficam só com o código do
- * aluno (sem nome, telefone nem e-mail), porque o caixa do estúdio precisa fechar.
+ * aluno (sem nome, telefone nem e-mail), porque o caixa do estúdio precisa fechar. Se o cadastro
+ * nasceu de uma aula experimental, o registro daquela aula guardava o nome e o telefone em
+ * texto: eles saem e fica só o código.
  */
 export function exclusaoDoAluno(
   alunoId: Id,
   turmas: readonly Turma[],
-  registrosFuturos: readonly RegistroAula[],
+  registrosConhecidos: readonly RegistroAula[],
   creditos: readonly CreditoReposicao[],
   hoje: DataISO,
   instante: Instante,
@@ -126,15 +134,22 @@ export function exclusaoDoAluno(
       delete fixosDesde[alunoId]
       return { ...t, alunosFixos: t.alunosFixos.filter((id) => id !== alunoId), fixosDesde }
     })
-  const registros = registrosFuturos
-    .filter((r) => r.data >= hoje && (alunoId in r.marcacoes || alunoId in r.reposicoes))
-    .map((r) => {
-      const marcacoes = { ...r.marcacoes }
-      const reposicoes = { ...r.reposicoes }
-      delete marcacoes[alunoId]
-      delete reposicoes[alunoId]
-      return { ...r, marcacoes, reposicoes, atualizadoEm: instante }
-    })
+  const registros: RegistroAula[] = []
+  for (const r of registrosConhecidos) {
+    const futuro = r.data >= hoje && (alunoId in r.marcacoes || alunoId in r.reposicoes)
+    const daExperimental = Object.entries(r.experimentais ?? {}).filter(([, e]) => e.alunoId === alunoId)
+    if (!futuro && daExperimental.length === 0) continue
+    const novo: RegistroAula = { ...r, marcacoes: { ...r.marcacoes }, reposicoes: { ...r.reposicoes }, atualizadoEm: instante }
+    if (futuro) {
+      delete novo.marcacoes[alunoId]
+      delete novo.reposicoes[alunoId]
+    }
+    if (daExperimental.length) {
+      novo.experimentais = { ...r.experimentais }
+      for (const [id] of daExperimental) novo.experimentais[id] = { nome: NOME_DE_QUEM_SAIU, telefone: '', alunoId }
+    }
+    registros.push(novo)
+  }
   return {
     turmas: semOAluno,
     registros,

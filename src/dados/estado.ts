@@ -10,6 +10,7 @@ import type { Alteracoes, Contexto } from '../dominio/presenca'
 import { cancelarAula, candidatosAReposicao, desfazerEncaixe, encaixar, reabrirAula } from '../dominio/reposicao'
 import type { OpcoesDeCancelamento } from '../dominio/reposicao'
 import { aceito, recusado } from '../dominio/resultado'
+import { NOME_DE_QUEM_SAIU } from '../dominio/privacidade'
 import type { Resultado } from '../dominio/resultado'
 import type {
   Aluno,
@@ -63,7 +64,7 @@ export const unidades = computed(() => (base.value?.unidades ?? []).filter((u) =
 const ativos = computed(() => new Set((base.value?.alunos ?? []).filter((a) => a.situacao === 'ativo').map((a) => a.id)))
 
 export function nomeDoAluno(id: Id): string {
-  return alunosPorId.value.get(id)?.nome ?? 'Aluno removido'
+  return alunosPorId.value.get(id)?.nome ?? NOME_DE_QUEM_SAIU
 }
 
 /** O nome de quem está na aula: aluno pelo cadastro, experimental pelo próprio registro. */
