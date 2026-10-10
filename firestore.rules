@@ -211,6 +211,16 @@ service cloud.firestore {
       return adm(q) || (professor(q) && unidadeId in q.unidades);
     }
 
+    // A aula que o professor cria (registro ou vaga) é mesmo de uma turma da unidade que o
+    // documento diz: sem isso, o professor de uma unidade criava o registro ou a vaga de uma
+    // aula de outra dizendo que era da dele, e o documento ficava travado com a unidade errada
+    // (a unidade não muda depois e o registro não se apaga). A administração não passa por aqui:
+    // ela cria turmas e vagas no mesmo lote, e uma leitura por turma estouraria o teto de 20
+    // leituras por lote.
+    function turmaDaUnidade(turmaId, unidadeId) {
+      return dados(caminho('turmas', turmaId), {}).get('unidadeId', '') == unidadeId;
+    }
+
     // ---------- posse do estúdio ----------
 
     // Criada uma vez, no primeiro acesso, junto com o cadastro de quem reivindica e o acesso
@@ -447,7 +457,10 @@ service cloud.firestore {
       allow get: if (emailConfirmado() && email == meuEmail()) || adm(quemSou());
       allow list: if adm(quemSou());
       allow create, update: if adm(quemSou()) && conviteValido(quemSou(), email, request.resource.data);
-      allow delete: if (emailConfirmado() && email == meuEmail()) || adm(quemSou());
+      // revogar o convite de administração é só do titular, como convidar (o documento pode já
+      // não existir: a pessoa apaga o próprio convite ao aceitar)
+      allow delete: if (emailConfirmado() && email == meuEmail())
+        || (adm(quemSou()) && (resource == null || resource.data.get('papel', '') != 'administrador' || titular(quemSou())));
     }
 
     // Liga a conta (uid) à pessoa (cadastro da equipe ou do aluno). Só a própria pessoa cria,
@@ -648,7 +661,7 @@ service cloud.firestore {
       return (equipe(q)
           && registroValido(aulaId, r)
           && naUnidade(q, r.unidadeId)
-          && (adm(q) || !('cancelamento' in r)))
+          && (adm(q) || (!('cancelamento' in r) && turmaDaUnidade(r.turmaId, r.unidadeId))))
         || (aluno(q) && alunoCriaRegistro(q, aulaId));
     }
 
@@ -691,7 +704,8 @@ service cloud.firestore {
     function criarVaga(q, aulaId) {
       return equipe(q)
         && vagaValida(aulaId, request.resource.data)
-        && naUnidade(q, request.resource.data.unidadeId);
+        && naUnidade(q, request.resource.data.unidadeId)
+        && (adm(q) || turmaDaUnidade(request.resource.data.turmaId, request.resource.data.unidadeId));
     }
 
     function alterarVaga(q, aulaId) {
@@ -935,8 +949,25 @@ service cloud.firestore {
       return (equipe(q)
           && creditoValido(creditoId, c)
           && naUnidade(q, c.unidadeId)
-          && (adm(q) || c.get('motivo', 'aviso') == 'aviso'))
+          && (adm(q) || creditoDoAvisoDaEquipe(creditoId, c)))
         || (aluno(q) && alunoCriaCredito(q, creditoId, c));
+    }
+
+    // O crédito que o professor cria é o de um aviso de verdade: o aluno está como "avisou" no
+    // registro da aula de origem depois do lote (o app grava os dois juntos), o crédito tem o
+    // código fixo daquela falta, é da unidade da aula, nasce livre e vale no máximo os dias
+    // combinados. Sem isso, "crédito de aviso" para qualquer aluno, de qualquer aula e válido até
+    // 2099 era uma cortesia com outro nome.
+    function creditoDoAvisoDaEquipe(creditoId, c) {
+      let r = dadosDepois(caminho('registros', aulaDe(c.origem)), {});
+      let validade = dados(caminho('configuracao', 'estudio'), {}).get('validadeCreditoDias', 30);
+      return c.get('motivo', 'aviso') == 'aviso'
+        && !('usadoEm' in c)
+        && creditoId == 'cr_' + c.alunoId + '_' + c.origem.turmaId + '_' + c.origem.data
+        && r.get('unidadeId', '') == c.unidadeId
+        && marcacoes(r).get(c.alunoId, '') == 'avisou'
+        && c.validoAte >= c.origem.data
+        && dia(c.validoAte) <= dia(c.origem.data) + duration.value(validade, 'd');
     }
 
     // o crédito do aviso: id fixo por aula, validade dentro da combinada, junto com o aviso
@@ -959,8 +990,18 @@ service cloud.firestore {
       return (equipe(q)
           && creditoValido(creditoId, request.resource.data)
           && naUnidade(q, resource.data.unidadeId)
-          && (adm(q) || mudou().hasOnly(['usadoEm'])))
+          && (adm(q) || (mudou().hasOnly(['usadoEm']) && usoConfereComOEncaixe(request.resource.data, resource.data))))
         || (aluno(q) && alunoMexeNoCredito(q));
+    }
+
+    // Professor marca o crédito como usado só junto com o encaixe (o registro daquela aula,
+    // depois do lote, aponta este crédito para o aluno) e o devolve só tirando a reposição de
+    // lá; sem isso, devolver um crédito usado sem desfazer o encaixe dava uma reposição a mais.
+    function usoConfereComOEncaixe(depois, antes) {
+      return ('usadoEm' in depois)
+        ? reposicoes(dadosDepois(caminho('registros', aulaDe(depois.usadoEm)), {})).get(depois.alunoId, '') == depois.id
+        : (!('usadoEm' in antes)
+          || reposicoes(dadosDepois(caminho('registros', aulaDe(antes.usadoEm)), {})).get(antes.alunoId, '') != antes.id);
     }
 
     // usar (encaixe) ou devolver (desistência) o próprio crédito, junto com o registro da aula
@@ -980,7 +1021,10 @@ service cloud.firestore {
         || (professor(q)
           && naUnidade(q, resource.data.unidadeId)
           && !('usadoEm' in resource.data)
-          && resource.data.get('motivo', 'aviso') == 'aviso')
+          && resource.data.get('motivo', 'aviso') == 'aviso'
+          // o crédito do aviso sai junto com o "avisou" (a pessoa veio, ou o aviso foi desfeito):
+          // apagar e deixar o aviso lá tirava a reposição do aluno
+          && marcacoes(dadosDepois(caminho('registros', aulaDe(resource.data.origem)), {})).get(resource.data.alunoId, '') != 'avisou')
         || (aluno(q) && alunoApagaCredito(q));
     }
 

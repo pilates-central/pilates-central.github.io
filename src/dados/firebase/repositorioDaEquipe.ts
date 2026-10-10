@@ -98,6 +98,30 @@ function pedacos<T>(lista: readonly T[], tamanho: number): T[][] {
   return saida
 }
 
+/**
+ * Lotes de vagas (ids `turma_AAAA-MM-DD`) com no máximo `turmas` turmas diferentes em cada um.
+ * A vaga que o professor cria faz as regras lerem a turma, e o Firestore aceita até 20 leituras
+ * de documentos diferentes por lote (o emulador não confere esse teto): com poucas turmas por
+ * lote, a conferência da janela do professor nunca passa dele.
+ */
+export function lotesDeVagas(ids: readonly string[], porLote: number, turmas: number): string[][] {
+  const saida: string[][] = []
+  let atual: string[] = []
+  let doLote = new Set<string>()
+  for (const id of ids) {
+    const turma = id.slice(0, -11)
+    if (atual.length >= porLote || (!doLote.has(turma) && doLote.size >= turmas)) {
+      saida.push(atual)
+      atual = []
+      doLote = new Set()
+    }
+    atual.push(id)
+    doLote.add(turma)
+  }
+  if (atual.length) saida.push(atual)
+  return saida
+}
+
 export function criarRepositorioDaEquipe(sdk: Sdk, sessao: SessaoDaEquipe): RepositorioDaEquipe {
   const { db } = sdk
   let base: DadosBase | null = null
@@ -413,7 +437,9 @@ export function criarRepositorioDaEquipe(sdk: Sdk, sessao: SessaoDaEquipe): Repo
     const diferentes = [...calculadas]
       .filter(([id, v]) => possoNaUnidade(v.unidadeId) && !mesmaProjecao(gravadas.get(id), v))
       .map(([id]) => id)
-    for (const lote of pedacos(diferentes, 100)) await gravar({}, lote)
+    // a administração grava a janela em lotes de 100; o professor, com no máximo 12 turmas por lote
+    const lotes = souAdministracao() ? pedacos(diferentes, 100) : lotesDeVagas(diferentes, 100, 12)
+    for (const lote of lotes) await gravar({}, lote)
 
     if (souAdministracao()) {
       const portais = portaisDosAlunos(estadoDe(base, registros), instante)

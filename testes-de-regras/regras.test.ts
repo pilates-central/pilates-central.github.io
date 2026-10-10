@@ -220,11 +220,22 @@ describe('chamada: presença, aviso e reposição da equipe', () => {
   })
 
   it('professor cria crédito de aviso, não de cortesia; a administração dá cortesia', async () => {
+    // o professor marca "avisou" e o crédito daquela falta no mesmo lote, como o app grava
     const origem = { turmaId: 't-1', data: '2026-09-15' }
-    await assertSucceeds(setDoc(doc(como('prof'), 'creditos/cr-p'), credito('cr-p', 'a-1', origem)))
+    const aula = `t-1_${origem.data}`
+    const id = `cr_a-1_${aula}`
+    const avisoCom = (quem: Quem, c: Record<string, unknown>) => {
+      const db = como(quem)
+      const b = writeBatch(db)
+      b.set(doc(db, `registros/${aula}`), { id: aula, turmaId: 't-1', unidadeId: 'u-centro', data: origem.data, marcacoes: { 'a-1': 'avisou' }, reposicoes: {}, atualizadoEm: instante })
+      b.set(doc(db, `creditos/${String(c.id)}`), c)
+      return b.commit()
+    }
+    const validoAte = '2026-10-15'
+    await assertSucceeds(avisoCom('prof', credito(id, 'a-1', origem, { validoAte })))
     await assertFails(setDoc(doc(como('prof'), 'creditos/cr-c'), credito('cr-c', 'a-1', origem, { motivo: 'cortesia' })))
     await assertSucceeds(setDoc(doc(como('adm'), 'creditos/cr-c'), credito('cr-c', 'a-1', origem, { motivo: 'cortesia' })))
-    await assertFails(setDoc(doc(como('profJardim'), 'creditos/cr-j'), credito('cr-j', 'a-1', origem)))
+    await assertFails(avisoCom('profJardim', credito(id, 'a-1', origem, { validoAte })))
   })
 
   it('a equipe atualiza a vaga da aula; o professor de outra unidade não', async () => {
