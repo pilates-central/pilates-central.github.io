@@ -297,6 +297,66 @@ test.describe('fluidez das transições', () => {
     })
   })
 
+  test('telas do primeiro dia: guia, grade, importação, correção e ajuda', async ({ page }, info) => {
+    test.setTimeout(120_000)
+    await entrarComoAdministracao(page)
+    await irParaAba(page, 'Mais')
+    await page.waitForTimeout(500)
+    const referencia = await medirReferencia(page)
+    console.log(JSON.stringify({ regua: info.project.name, cpuLenta: LENTO, p95: referencia, teste: 'primeiro-dia' }))
+
+    // o guia (prévia na demonstração): abrir, passar de passo e a grade, que é a tela mais cheia
+    await medir(page, info, referencia, 'abrir-guia', async () => {
+      await page.getByRole('button', { name: /^Montar o estúdio/ }).click()
+    })
+    await esperarParado(page, '.tela-quadro')
+    await medir(page, info, referencia, 'guia-proximo-passo', async () => {
+      await page.getByRole('button', { name: 'Continuar' }).click()
+    })
+    await esperarParado(page, '.tela-quadro')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Unidades')
+    await page.getByRole('button', { name: 'Continuar' }).click()
+    await esperarParado(page, '.tela-quadro')
+    await medir(page, info, referencia, 'abrir-grade', async () => {
+      await page.getByRole('button', { name: 'Continuar' }).click()
+    })
+    await esperarParado(page, '.tela-quadro')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Turmas da semana')
+    await medir(page, info, referencia, 'grade-tocar', async () => {
+      await page.getByRole('button', { name: 'Sábado, 21h: criar turma' }).click()
+    })
+    await medir(page, info, referencia, 'grade-folha-do-padrao', async () => {
+      await page.getByRole('button', { name: 'Mudar' }).click()
+    })
+    await esperarFolhaParada(page)
+    await page.keyboard.press('Escape')
+    await expect(folha(page)).toHaveCount(0)
+
+    // importar 40 linhas: a prévia monta em partes, a correção abre numa folha
+    await irPara(page, '#/alunos/importar')
+    const linhas = ['Nome\tWhatsApp\tPlano\tMensalidade']
+    // telefones de 50 a 89 (a demonstração usa de 01 a 49); a cada nove linhas, um sem DDD
+    for (let i = 0; i < 40; i++) linhas.push(`Pessoa Teste ${i}\t${i % 9 ? `(11) 90000-00${50 + i}` : '11 9000'}\t2x\t280`)
+    await page.getByLabel('Cole aqui as linhas da planilha').fill(linhas.join('\n'))
+    await medir(page, info, referencia, 'importar-conferir', async () => {
+      await page.getByRole('button', { name: 'Conferir' }).click()
+    })
+    await expect(page.getByRole('heading', { name: /alunos prontos, 5 linhas com erro/ })).toBeVisible()
+    await medir(page, info, referencia, 'importar-folha-de-correcao', async () => {
+      await page.locator('[data-erro="sim"]').first().click()
+    })
+    await esperarFolhaParada(page)
+    await page.keyboard.press('Escape')
+    await expect(folha(page)).toHaveCount(0)
+
+    await irParaAba(page, 'Mais')
+    await medir(page, info, referencia, 'abrir-ajuda', async () => {
+      await page.getByRole('button', { name: /^Ajuda/ }).click()
+    })
+    await esperarParado(page, '.tela-quadro')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('Ajuda')
+  })
+
   test('app do aluno e página pública: aba, folha, aviso, dia e horário', async ({ page }, info) => {
     test.setTimeout(90_000)
     await abrirApp(page)

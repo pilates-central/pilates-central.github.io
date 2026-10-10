@@ -20,6 +20,15 @@ class Dedo {
   }
 }
 
+/** Alunos, Importar: o caminho até o campo de colar (os toques que contam são os depois de colar). */
+async function dedoAteImportar(page: Page): Promise<void> {
+  await page.getByRole('navigation', { name: 'Principal' }).getByRole('button', { name: 'Alunos' }).click()
+  await esperarParado(page, '.tela-quadro')
+  await page.getByRole('button', { name: 'Importar', exact: true }).click()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Importar de uma planilha')
+  await esperarParado(page, '.tela-quadro')
+}
+
 test.describe('toques por tarefa no iPhone SE', () => {
   test('professor entre uma aula e outra: chamada da turma inteira em 3 toques, com uma falta', async ({ page }) => {
     await entrarComoProfessor(page, 'Camila Nunes', '2026-10-09T18:05')
@@ -123,6 +132,50 @@ test.describe('toques por tarefa no iPhone SE', () => {
     await dedo.tocar(folha(page).getByRole('button', { name: 'Confirmar reposição' }))
     await expect(aviso(page, /Reposição marcada/)).toBeVisible()
     expect(dedo.toques).toBeLessThanOrEqual(5)
+  })
+
+  test('registrar quem pediu a aula experimental em 5 toques, pelo Hoje', async ({ page }) => {
+    await entrarComoAdministracao(page)
+    const dedo = new Dedo(page)
+    await dedo.tocar(page.getByRole('button', { name: 'Registrar aula experimental' }))
+    await esperarFolhaParada(page)
+    await dedo.tocar(folha(page).locator('.opcao-aula').first())
+    await dedo.tocar(folha(page).getByLabel('Nome'))
+    await page.keyboard.type('Laura Mendes')
+    await dedo.tocar(folha(page).getByLabel('WhatsApp'))
+    await page.keyboard.type('11900000091')
+    await dedo.tocar(folha(page).getByRole('button', { name: /^Registrar / }))
+    await expect(aviso(page, /Laura vem experimentar/)).toBeVisible()
+    expect(dedo.toques).toBeLessThanOrEqual(5)
+  })
+
+  test('importar 30 alunos de uma planilha em até 8 toques depois de colar, corrigindo uma linha e tirando outra', async ({ page }) => {
+    await entrarComoAdministracao(page)
+    await dedoAteImportar(page)
+    // 30 linhas como o Excel copia; a 5a sem DDD e a 9a repetindo a 1a
+    const linhas = ['Nome\tCelular\tPlano\tValor']
+    for (let i = 0; i < 30; i++) {
+      const telefone = i === 4 ? '9000-0054' : i === 8 ? '(11) 90000-0050' : `(11) 90000-00${50 + i}`
+      linhas.push(`${i === 8 ? 'Aluna Planilha 0' : `Aluna Planilha ${i}`}\t${telefone}\t2x\t280`)
+    }
+    await page.getByLabel('Cole aqui as linhas da planilha').fill(linhas.join('\n'))
+    const dedo = new Dedo(page)
+    await dedo.tocar(page.getByRole('button', { name: 'Conferir' }))
+    await expect(page.getByRole('heading', { name: '28 alunos prontos, 2 linhas com erro' })).toBeVisible()
+    // o WhatsApp sem DDD: corrige ali mesmo
+    await dedo.tocar(page.locator('[data-linha="5"]'))
+    await esperarFolhaParada(page)
+    await dedo.tocar(folha(page).getByLabel('WhatsApp'))
+    await folha(page).getByLabel('WhatsApp').fill('(11) 90000-0054')
+    await dedo.tocar(folha(page).getByRole('button', { name: 'Salvar correção' }))
+    // a linha repetida sai da lista
+    await dedo.tocar(page.locator('[data-linha="9"]'))
+    await esperarFolhaParada(page)
+    await dedo.tocar(folha(page).getByRole('button', { name: 'Tirar da lista' }))
+    await expect(page.getByRole('heading', { name: '29 alunos prontos', exact: true })).toBeVisible()
+    await dedo.tocar(page.getByRole('button', { name: 'Importar 29 alunos' }))
+    await expect(page.getByText(/^29 alunos entraram no cadastro/)).toBeVisible()
+    expect(dedo.toques).toBeLessThanOrEqual(8)
   })
 
   test('quem nunca foi ao estúdio chega ao pedido no WhatsApp em 2 toques', async ({ page }) => {
