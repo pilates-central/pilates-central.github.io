@@ -565,6 +565,8 @@ function CorrecaoDeAluno({
       mesmoAssim,
       // o que a leitura apontou (unidade, data, forma) a pessoa corrigiu aqui: a conferência refaz
       erros: {},
+      // as vezes por semana estavam à vista nas pílulas: o aviso do plano não lido sai
+      avisos: lido.avisos.filter((a) => !/^(Não entendi o plano|Sem o plano)/.test(a)),
     })
   return (
     <FolhaInferior

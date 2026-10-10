@@ -418,6 +418,7 @@ suíte inteira antes e depois, com o caminho base padrão e com `BASE_PATH=/`.
 
 ### Achado e corrigido
 - [x] A importação não lia "seg às 18h", "Seg 8h / Qua 8h", começo e fim da aula ("ter 18:00-18:50", "seg 7h às 7h50"), "2x semana" nem o WhatsApp com o zero antes do DDD ("019 90000-0015"); agora lê, com teste. "seg a sex 7h" continua pedindo para escrever os dias (é intervalo, e ler errado seria pior)
+- [x] Coluna "Plano" com o nome do plano ("Mensal", "Trimestral", "Mensal 2x"): cada linha virava erro e a planilha inteira ficava de fora. Agora "Mensal 2x" dá 2x, e o plano que não diz as vezes vira aviso ("ficou 2x por semana", ou o número de turmas), que some quando a pessoa confere na correção
 - [x] Planilha com os dias numa coluna e a hora em outra ("Dias: seg e qua", "Horário: 7h"): a segunda coluna era ignorada e todas as linhas davam erro de horário; agora as duas viram uma coluna de turmas (`juntarDiasEHorario`)
 - [x] Depois de importar, corrigir o que ficou de fora obrigava a colar tudo de novo e achar as linhas no meio de 30 "já está cadastrado"; agora "Corrigir as linhas que ficaram de fora" volta à prévia só com elas
 - [x] A prévia aparecia rolada até onde estava o botão, no meio da lista, sem o título com as linhas com erro (visto nos vídeos do WebKit, iPhone 13 e SE); cada etapa da importação começa do topo

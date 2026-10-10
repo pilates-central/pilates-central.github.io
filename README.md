@@ -128,8 +128,8 @@ tela inicial sem loja e funciona sem internet no modo demonstração.
   português ("Celular", "Plano", "Horários", "Valor (R$)", "Como paga"...) ou, sem cabeçalho, pelo
   que têm dentro; a que sobrar a pessoa diz o que é. As turmas podem vir do jeito que se escreve
   ("seg 7h, qua 7h", "seg e qua às 18h", "Seg 8h / Qua 8h", "ter 18:00-18:50") ou com os dias numa
-  coluna e a hora em outra; o plano como "2x" ou "2x semana"; o WhatsApp com ou sem o zero antes
-  do DDD. A prévia começa do topo e mostra cada linha, as com erro primeiro (WhatsApp sem DDD,
+  coluna e a hora em outra; o plano como "2x", "2x semana" ou "Mensal 2x" (um plano que não diz
+  as vezes, como "Mensal", vira aviso e não erro); o WhatsApp com ou sem o zero antes do DDD. A prévia começa do topo e mostra cada linha, as com erro primeiro (WhatsApp sem DDD,
   turma que não existe, aluno repetido, turma cheia), e a correção é feita ali mesmo, numa folha
   com os campos do cadastro, ou a linha sai da lista. Grava em lote (com internet: sem ela, a
   planilha espera a conexão em vez de ir para a fila), diz quantos entraram, quantos já estão nas

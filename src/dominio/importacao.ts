@@ -357,6 +357,16 @@ export function lerVezes(texto: string): number | null {
   return n >= 1 && n <= 6 ? n : null
 }
 
+/**
+ * As vezes por semana no meio de um texto maior, como os estúdios escrevem o plano: "Mensal 2x",
+ * "Trimestral - 3 vezes". Só na leitura da linha; reconhecer a coluna pelo conteúdo usa lerVezes,
+ * que pede o texto inteiro.
+ */
+export function lerVezesNoMeio(texto: string): number | null {
+  const m = /(?:^|[^\d])([1-6]) ?(?:x|vez|vezes)\b/.exec(normalizar(texto))
+  return m?.[1] ? Number(m[1]) : null
+}
+
 const FORMAS_ESCRITAS: Record<string, FormaPagamento> = {
   pix: 'pix',
   credito: 'cartao_credito',
@@ -450,8 +460,7 @@ export function lerLinhaDeAluno(celulas: readonly string[], colunas: readonly (C
   const unidade = unidadeTexto ? unidadePorNome(unidadeTexto, ctx.unidades) : ctx.unidades.find((u) => u.id === ctx.unidadePadrao)
   if (unidadeTexto && !unidade) erros.unidade = `Não existe a unidade "${unidadeTexto}".`
   const vezesTexto = v('vezesPorSemana')
-  const vezes = vezesTexto ? lerVezes(vezesTexto) : null
-  if (vezesTexto && vezes === null) erros.vezesPorSemana = `Não entendi "${vezesTexto}": escreva 2, 2x ou 2 vezes.`
+  const vezes = vezesTexto ? (lerVezes(vezesTexto) ?? lerVezesNoMeio(vezesTexto)) : null
   const turmasTexto = v('turmas')
   const horarios = turmasTexto ? lerTurmas(turmasTexto) : []
   const desdeTexto = v('desde')
@@ -471,6 +480,9 @@ export function lerLinhaDeAluno(celulas: readonly string[], colunas: readonly (C
     desde: desde ?? ctx.hoje,
   }
   if (!vezesTexto && horarios.length === 0) avisos.push('Sem o plano na planilha: ficou 2x por semana.')
+  // um plano que não diz as vezes ("Mensal") não segura a linha: fica o número de turmas (ou 2),
+  // e a pessoa vê o aviso e muda na correção ou depois, na ficha
+  if (vezesTexto && vezes === null) avisos.push(`Não entendi o plano "${vezesTexto}": ficou ${rascunho.vezesPorSemana}x por semana.`)
   const plano: RascunhoPlano | null = valorTexto ? { valorMensal: valorTexto, formaPreferida: forma ?? 'pix', diaVencimento: 10 } : null
   if (!valorTexto) avisos.push('Sem mensalidade na planilha: preencha depois, na ficha.')
   return { linha, rascunho, plano, turmasTexto, turmaIds: [], mesmoAssim: false, erros, avisos }

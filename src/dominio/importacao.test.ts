@@ -14,6 +14,7 @@ import {
   lerTurmas,
   lerTurmasDaPlanilha,
   lerVezes,
+  lerVezesNoMeio,
   lotesDaImportacao,
   mapearColunasDeAlunos,
   mapearColunasDeTurmas,
@@ -203,6 +204,12 @@ describe('pedaços que as pessoas escrevem', () => {
     expect(lerVezes('2x semana')).toBe(2)
     expect(lerVezes('2 x na semana')).toBe(2)
     expect(lerVezes('3x/sem')).toBe(3)
+    // no meio de um texto maior, só na leitura da linha (a coluna se reconhece pelo texto inteiro)
+    expect(lerVezes('Mensal 2x')).toBeNull()
+    expect(lerVezesNoMeio('Mensal 2x')).toBe(2)
+    expect(lerVezesNoMeio('Trimestral - 3 vezes por semana')).toBe(3)
+    expect(lerVezesNoMeio('Mensal')).toBeNull()
+    expect(lerVezesNoMeio('R$ 280')).toBeNull()
     expect(lerVezes('280')).toBeNull()
     expect(lerVezes('12')).toBeNull()
     expect(lerForma('Pix')).toBe('pix')
@@ -285,6 +292,18 @@ describe('conferir os alunos da planilha', () => {
     expect(r.lidos[0]?.rascunho.vezesPorSemana).toBe(1)
     expect(r.lidos[0]?.plano).toBeNull()
     expect(r.lidos[1]?.erros.unidade).toBe('Não existe a unidade "Praia".')
+  })
+
+  it('o plano escrito como o estúdio chama ("Mensal 2x", "Mensal") não segura a linha', () => {
+    contador = 0
+    const linhas = lerTabela('Nome\tWhatsApp\tPlano\tTurmas\nIvo Nunes\t(11) 90000-0040\tMensal 3x\t\nJulia Dias\t(11) 90000-0041\tMensal\tseg 7h\nKaio Lima\t(11) 90000-0042\tTrimestral\t')
+    const mapa = mapearColunasDeAlunos(linhas)
+    expect(mapa.colunas).toEqual(['nome', 'telefone', 'vezesPorSemana', 'turmas'])
+    const r = conferirImportacao(lerAlunos(linhas, mapa, ctx), ctx, idNovo)
+    expect(r.comErro).toEqual([])
+    expect(r.lidos.map((l) => l.rascunho.vezesPorSemana)).toEqual([3, 1, 2])
+    expect(r.lidos[1]?.avisos[0]).toBe('Não entendi o plano "Mensal": ficou 1x por semana.')
+    expect(r.lidos[2]?.avisos[0]).toBe('Não entendi o plano "Trimestral": ficou 2x por semana.')
   })
 
   it('parte a gravação em lotes, e a turma de cada lote leva os fixos até ali', () => {
