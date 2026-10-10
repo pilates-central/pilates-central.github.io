@@ -324,19 +324,22 @@ export function Instalacao() {
           <span class="passo-numero">1</span>
           <span>
             No Safari, toque em <strong>Compartilhar</strong>{' '}
-            <Icone nome="compartilhar" tamanho={20} class="icone-em-linha" rotulo="(ícone de compartilhar)" />
+            <Icone nome="compartilhar" tamanho={20} class="icone-em-linha" rotulo="(ícone de compartilhar)" />. Se ele não estiver à
+            vista, fica no botão de três pontinhos, ao lado do endereço.
           </span>
         </li>
         <li class="passo">
           <span class="passo-numero">2</span>
           <span>
-            Escolha <strong>Adicionar à Tela de Início</strong>
+            Escolha <strong>Adicionar à Tela de Início</strong> (se aparecer <strong>Abrir como App Web</strong>, deixe ligado)
           </span>
         </li>
         <li class="passo">
           <span class="passo-numero">3</span>
           <span>
             Toque em <strong>Adicionar</strong>. O app abre como os outros, sem a barra do navegador.
+            {/* o app da tela inicial do iPhone guarda os dados à parte do Safari: a sessão não vem junto */}
+            {emailDaConta() && ' Na primeira vez, entre de novo com o e-mail e a senha: o app da tela inicial não usa o que ficou no Safari.'}
           </span>
         </li>
       </ol>

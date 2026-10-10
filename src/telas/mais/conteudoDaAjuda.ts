@@ -21,10 +21,13 @@ export const CARTOES_DE_AJUDA: readonly CartaoDeAjuda[] = [
     paragrafos: ['O app abre pelo navegador e fica na tela inicial como os outros, sem loja.'],
     passos: [
       'No iPhone, abra o link do app no Safari.',
-      'Toque em Compartilhar (o quadrado com a seta para cima, embaixo da tela).',
-      'Role e toque em Adicionar à Tela de Início, depois em Adicionar.',
+      'Toque em Compartilhar (o quadrado com a seta para cima). Se ele não estiver à vista, fica no botão de três pontinhos, ao lado do endereço.',
+      'Role e toque em Adicionar à Tela de Início. Se aparecer Abrir como App Web, deixe ligado. Toque em Adicionar.',
     ],
-    depois: ['No Android, no Chrome: toque no menu (os três pontinhos) e em Instalar app, ou em Adicionar à tela inicial.'],
+    depois: [
+      'Depois, abra o app pelo ícone e entre com o seu e-mail e a sua senha: o app da tela inicial não usa o que ficou no Safari.',
+      'No Android, no Chrome: toque no menu (os três pontinhos) e em Instalar app, ou em Adicionar à tela inicial.',
+    ],
   },
   {
     id: 'montar',
