@@ -4,6 +4,7 @@ import {
   conferirImportacao,
   conferirTurmas,
   detectarSeparador,
+  juntarDiasEHorario,
   lerAlunos,
   lerData,
   lerDiaDaSemana,
@@ -113,6 +114,30 @@ describe('ler o texto colado', () => {
     // a mesma coluna duas vezes: vale a primeira
     expect(mapearColunasDeAlunos([['Nome', 'Nome'], ['Ana', 'Bia']]).colunas).toEqual(['nome', 'ignorar'])
   })
+
+  it('os dias numa coluna e a hora em outra viram uma coluna só de turmas', () => {
+    const juntas = juntarDiasEHorario([
+      ['Nome', 'Celular', 'Dias', 'Horário', 'Valor'],
+      ['Ana Souza', '(11) 90000-0002', 'seg e qua', '7h', '280'],
+      ['Bia Lima', '(11) 90000-0003', 'Terça, Quinta', '18:30', '280'],
+      ['Caio Reis', '(11) 90000-0004', '', '', '280'],
+    ])
+    expect(juntas).toEqual([
+      ['Nome', 'Celular', 'Dias', 'Valor'],
+      ['Ana Souza', '(11) 90000-0002', 'seg/qua 7h', '280'],
+      ['Bia Lima', '(11) 90000-0003', 'Terça/Quinta 18:30', '280'],
+      ['Caio Reis', '(11) 90000-0004', '', '280'],
+    ])
+    const mapa = mapearColunasDeAlunos(juntas)
+    expect(mapa.colunas).toEqual(['nome', 'telefone', 'turmas', 'valorMensal'])
+    expect(mapa.naoReconhecidas).toEqual([])
+    expect(lerTurmas('Terça/Quinta 18:30').map((h) => h?.dia)).toEqual([2, 4])
+    // uma coluna só de turmas, ou sem cabeçalho: nada muda
+    const umaSo = [['Nome', 'Horários'], ['Ana Souza', 'seg 7h']]
+    expect(juntarDiasEHorario(umaSo)).toEqual(umaSo)
+    const semCabecalho = [['Ana Souza', '(11) 90000-0002', 'seg', '7h']]
+    expect(juntarDiasEHorario(semCabecalho)).toEqual(semCabecalho)
+  })
 })
 
 describe('pedaços que as pessoas escrevem', () => {
@@ -152,6 +177,22 @@ describe('pedaços que as pessoas escrevem', () => {
     expect(lerTurmas('')).toEqual([])
   })
 
+  it('turmas com "às", com o começo e o fim, e separadas por barra ou mais', () => {
+    const lidas = (t: string) => lerTurmas(t).map((h) => (h ? `${h.dia} ${h.inicio}` : null))
+    expect(lidas('seg às 18h, qua às 18h')).toEqual(['1 18:00', '3 18:00'])
+    expect(lidas('Segunda e quarta às 8h')).toEqual(['1 08:00', '3 08:00'])
+    expect(lidas('ter a partir das 19h')).toEqual(['2 19:00'])
+    expect(lidas('Seg 8h / Qua 8h')).toEqual(['1 08:00', '3 08:00'])
+    expect(lidas('seg 7h + qui 9h30')).toEqual(['1 07:00', '4 09:30'])
+    expect(lidas('ter - 18h')).toEqual(['2 18:00'])
+    expect(lidas('qui 7 h')).toEqual(['4 07:00'])
+    expect(lidas('seg 7h às 7h50, qua 7h às 7h50')).toEqual(['1 07:00', '3 07:00'])
+    expect(lidas('ter 18:00-18:50 e qui 18:00 - 18:50')).toEqual(['2 18:00', '4 18:00'])
+    expect(lidas('Terça 7:00 e Quinta 7:00')).toEqual(['2 07:00', '4 07:00'])
+    // "seg a sex" é um intervalo de dias: melhor pedir para escrever do que ler errado
+    expect(lidas('seg a sex 7h')).toEqual([null])
+  })
+
   it('vezes por semana, forma de pagamento e data', () => {
     expect(lerVezes('2')).toBe(2)
     expect(lerVezes('2x')).toBe(2)
@@ -159,6 +200,9 @@ describe('pedaços que as pessoas escrevem', () => {
     expect(lerVezes('duas')).toBe(2)
     expect(lerVezes('muitas')).toBeNull()
     expect(lerVezes('3 aulas/semana')).toBe(3)
+    expect(lerVezes('2x semana')).toBe(2)
+    expect(lerVezes('2 x na semana')).toBe(2)
+    expect(lerVezes('3x/sem')).toBe(3)
     expect(lerVezes('280')).toBeNull()
     expect(lerVezes('12')).toBeNull()
     expect(lerForma('Pix')).toBe('pix')

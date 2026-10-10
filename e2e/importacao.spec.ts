@@ -79,6 +79,52 @@ test.describe('importar de uma planilha', () => {
     await expect(page.getByText('R$ 280,00 por mês')).toBeVisible()
   })
 
+  test('importa o que está pronto e depois corrige só o que ficou de fora; dias e hora em duas colunas', async ({ page }) => {
+    await abrirImportacao(page)
+    await colar(
+      page,
+      [
+        'Nome\tCelular\tDias\tHorário\tValor',
+        'Olga Prates\t(11) 90000-0083\tsáb\t9h\t280',
+        'Pedro Quintas\t011 90000-0084\t\t\t280',
+        'Quésia Rocha\t11 9000\t\t\t280',
+        'Renan Souto\t(11) 90000-0086\tdom\tàs 10h\t280',
+      ].join('\n'),
+    )
+    // os dias e a hora viraram uma coluna só de turmas; o zero antes do DDD não atrapalha
+    await expect(page.getByRole('heading', { name: '2 alunos prontos, 2 linhas com erro' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /Colunas: Nome, WhatsApp, Turmas \(dia e hora\), Mensalidade/ })).toBeVisible()
+    await expect(linha(page, 1)).toContainText('sáb 9h')
+    await expect(linha(page, 4)).toContainText('Não existe turma de domingo às 10h nesta unidade.')
+
+    // a proprietária importa o que está pronto primeiro
+    await page.getByRole('button', { name: 'Importar 2 alunos' }).click()
+    await expect(page.getByText('2 alunos entraram no cadastro; 1 já está nas turmas.')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Ficaram de fora' })).toBeVisible()
+
+    // e volta só para as duas linhas que ficaram de fora
+    await page.getByRole('button', { name: 'Corrigir as 2 linhas que ficaram de fora' }).click()
+    await expect(page.getByRole('heading', { name: '0 alunos prontos, 2 linhas com erro' })).toBeVisible()
+    await expect(page.locator('[data-linha]')).toHaveCount(2)
+    await linha(page, 3).click()
+    await esperarFolhaParada(page)
+    await folha(page).getByLabel('WhatsApp').fill('(11) 90000-0085')
+    await folha(page).getByRole('button', { name: 'Salvar correção' }).click()
+    await linha(page, 4).click()
+    await esperarFolhaParada(page)
+    await folha(page).getByRole('button', { name: 'Tirar da lista' }).click()
+    await expect(page.getByRole('heading', { name: '1 aluno pronto', exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Importar 1 aluno' }).click()
+    await expect(page.getByText('1 aluno entrou no cadastro.')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Ver os alunos' }).click()
+    await expect(titulo(page)).toHaveText('Alunos')
+    for (const nome of ['olga prates', 'pedro quintas', 'quesia rocha']) {
+      await page.getByRole('searchbox', { name: 'Buscar aluno' }).fill(nome)
+      await expect(page.locator('[data-aluno]')).toHaveCount(1)
+    }
+  })
+
   test('sem cabeçalho e com ponto e vírgula: as colunas vêm do conteúdo, a que sobrar a pessoa diz o que é; e dá para desfazer', async ({ page }) => {
     await abrirImportacao(page)
     await colar(page, 'Paulo Viana;(11) 90000-0081;sáb 9h;1x;obs livre\nRita Lobo;(11) 90000-0082;;2;outra obs')

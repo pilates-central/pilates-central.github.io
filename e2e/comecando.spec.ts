@@ -174,6 +174,14 @@ test('começar a usar: primeiro uso, 30 alunos de uma planilha, chamada, convite
   await importar.escrever(page.getByLabel('Cole aqui as linhas da planilha'), planilha(`${ABREVIADOS[agora.dia]} ${hora}h`, `${ABREVIADOS[copia.de]} ${horaDaGrade}h, ${ABREVIADOS[copia.para[0] ?? 3]} ${horaDaGrade}h`))
   await importar.tocar(page.getByRole('button', { name: 'Conferir' }))
   await expect(page.getByRole('heading', { name: '30 alunos prontos', exact: true })).toBeVisible()
+  // sem internet a planilha não vai para a fila (que só vive com o app aberto): a tela pede
+  // conexão e nada sai dela
+  await page.context().setOffline(true)
+  await page.getByRole('button', { name: 'Importar 30 alunos' }).click()
+  await expect(aviso(page, 'Sem internet agora. A importação precisa de conexão: tente de novo quando a internet voltar.')).toBeVisible()
+  await expect(page.getByRole('heading', { name: '30 alunos prontos', exact: true })).toBeVisible()
+  expect(await listarDocumentos('alunos', projeto)).toHaveLength(0)
+  await page.context().setOffline(false)
   await importar.tocar(page.getByRole('button', { name: 'Importar 30 alunos' }))
   await expect(page.getByText('30 alunos entraram no cadastro; 10 já estão nas turmas.')).toBeVisible({ timeout: 20_000 })
   toques['importar 30 alunos'] = importar.toques

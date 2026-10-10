@@ -39,6 +39,9 @@ describe('texto da interface', () => {
     expect(normalizarTelefone('(11) 0000-0000')).toHaveLength(12)
     expect(normalizarTelefone('0000-0012')).toBeNull()
     expect(normalizarTelefone('(01) 90000-0012')).toBeNull()
+    // o zero de discagem antes do DDD do celular
+    expect(normalizarTelefone('019 90000-0012')).toBe('5519900000012')
+    expect(normalizarTelefone('(019) 90000-0012')).toBe('5519900000012')
     // celular de 11 dígitos começa com 9
     expect(normalizarTelefone('(11) 80000-0012')).toBeNull()
   })

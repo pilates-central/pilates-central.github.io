@@ -21,7 +21,7 @@ import { Icone } from '../../componentes/Icone'
 import { Interruptor } from '../../componentes/Interruptor'
 import { Chip, Pilula } from '../../componentes/Pilula'
 import { Seletor } from '../../componentes/Seletor'
-import { base, unidades } from '../../dados/estado'
+import { base, repositorio, unidades } from '../../dados/estado'
 import { desfazerImportacao, idNovo, importarAlunos, importarTurmas } from '../../dados/gestao'
 import { quemPodeDarAula } from '../../dominio/equipe'
 import {
@@ -30,6 +30,7 @@ import {
   COMO_PREENCHER,
   conferirImportacao,
   conferirTurmas,
+  juntarDiasEHorario,
   lerAlunos,
   lerTabela,
   lerTurmasDaPlanilha,
@@ -120,6 +121,10 @@ function Entrada({
         pelo nome ou pelo que têm dentro, e na prévia você confere tudo antes de gravar.
       </p>
       <AreaDeTexto rotulo="Cole aqui as linhas da planilha" valor={texto} aoMudar={aoMudar} linhas={6} />
+      {/* logo abaixo do campo: com o teclado aberto no celular, o botão fica à vista depois de colar */}
+      <Botao variante="primario" icone="busca" largo disabled={!texto.trim()} onClick={aoConferir}>
+        Conferir
+      </Botao>
       {/* o campo de arquivo cobre o botão inteiro (transparente): o toque cai nele, com 48 px ou mais */}
       <label class="botao botao--secundario botao--largo tocavel botao-arquivo">
         <Icone nome="arquivo" tamanho={20} />
@@ -147,9 +152,6 @@ function Entrada({
           ))}
         </dl>
       )}
-      <Botao variante="primario" icone="busca" largo disabled={!texto.trim()} onClick={aoConferir}>
-        Conferir
-      </Botao>
     </div>
   )
 }
@@ -238,6 +240,8 @@ interface FeitoDaImportacao {
   comTurma: number
   semMensalidade: number
   deFora: AlunoLido[]
+  /** as linhas da planilha que entraram (para corrigir só as que ficaram de fora) */
+  linhasQueEntraram: number[]
 }
 
 /**
@@ -274,7 +278,7 @@ export function ImportarAlunos({ embutido = false, previa = false, aoConcluir }:
   if (!pode('editar-alunos') || !b) return <SemAcesso titulo="Importar alunos" texto="Só a administração cadastra alunos." />
 
   const conferir = () => {
-    const lidas = lerTabela(texto)
+    const lidas = juntarDiasEHorario(lerTabela(texto))
     if (lidas.length === 0) return avisar({ texto: 'Não achei nenhuma linha no texto.', icone: 'info' })
     setLinhas(lidas)
     setMapa(mapearColunasDeAlunos(lidas))
@@ -287,16 +291,22 @@ export function ImportarAlunos({ embutido = false, previa = false, aoConcluir }:
     if (!resultado || ocupado) return
     const comTurma = resultado.validos.filter((l) => l.turmaIds.length > 0).length
     const semMensalidade = resultado.validos.filter((l) => !l.plano).length
+    const linhasQueEntraram = resultado.validos.map((l) => l.linha)
     if (previa) {
-      setFeito({ ids: [], comTurma, semMensalidade, deFora: resultado.comErro })
+      setFeito({ ids: [], comTurma, semMensalidade, deFora: resultado.comErro, linhasQueEntraram })
       setEtapa('feito')
       return
+    }
+    // sem internet, a gravação esperaria numa fila que só vive enquanto o app está aberto: uma
+    // planilha inteira não deve ficar nela
+    if (repositorio.peek()?.modo !== 'demonstracao' && navigator.onLine === false) {
+      return avisar({ texto: 'Sem internet agora. A importação precisa de conexão: tente de novo quando a internet voltar.', icone: 'info', duracao: 7000 })
     }
     setOcupado(true)
     const r = await importarAlunos(lotesDaImportacao(resultado.gravacao))
     setOcupado(false)
     if (!r.ok) return avisar({ texto: r.mensagem, icone: 'info', duracao: 9000 })
-    setFeito({ ids: r.valor.importados, comTurma, semMensalidade, deFora: resultado.comErro })
+    setFeito({ ids: r.valor.importados, comTurma, semMensalidade, deFora: resultado.comErro, linhasQueEntraram })
     setEtapa('feito')
     avisar({ texto: `${plural(r.valor.importados.length, 'aluno importado', 'alunos importados')}.`, icone: 'presente' })
   }
@@ -405,6 +415,18 @@ export function ImportarAlunos({ embutido = false, previa = false, aoConcluir }:
                 </li>
               ))}
             </ul>
+            {/* de volta à prévia só com o que ficou de fora: quem já entrou sai da lista */}
+            <Botao
+              variante="secundario"
+              icone="editar"
+              largo
+              onClick={() => {
+                setTirados(new Set([...tirados, ...feito.linhasQueEntraram]))
+                setEtapa('previa')
+              }}
+            >
+              {feito.deFora.length === 1 ? 'Corrigir a linha que ficou de fora' : `Corrigir as ${feito.deFora.length} linhas que ficaram de fora`}
+            </Botao>
           </section>
         )}
         {!previa && feito && feito.ids.length > 0 && (
@@ -638,6 +660,9 @@ export function ImportarTurmas() {
 
   const importar = async () => {
     if (!resultado || ocupado) return
+    if (repositorio.peek()?.modo !== 'demonstracao' && navigator.onLine === false) {
+      return avisar({ texto: 'Sem internet agora. A importação precisa de conexão: tente de novo quando a internet voltar.', icone: 'info', duracao: 7000 })
+    }
     setOcupado(true)
     const r = await importarTurmas(resultado.turmas)
     setOcupado(false)

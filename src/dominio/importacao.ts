@@ -218,6 +218,32 @@ export function inferirColunasDeAlunos(linhas: readonly string[][]): (CampoDeAlu
   return saida
 }
 
+/**
+ * Planilha com os dias numa coluna e a hora em outra ("Dias: seg e qua", "Horário: 7h"): as duas
+ * viram uma coluna só de turmas ("seg/qua 7h"), que é o que a importação lê. Só com cabeçalho, e
+ * só quando uma coluna tem só dias (sem número) e a outra só horas; fora disso, nada muda.
+ */
+export function juntarDiasEHorario(linhas: readonly string[][]): string[][] {
+  const [cabecalho = [], ...dados] = linhas
+  if (parecePessoa(cabecalho)) return linhas.map((l) => [...l])
+  const deTurmas = cabecalho.map((t, i) => (reconhecerCampo(t, CAMPOS_DE_ALUNO) === 'turmas' ? i : -1)).filter((i) => i >= 0)
+  if (deTurmas.length < 2) return linhas.map((l) => [...l])
+  const cheias = (i: number) => dados.map((l) => (l[i] ?? '').trim()).filter(Boolean)
+  const soDias = deTurmas.find((i) => cheias(i).length > 0 && cheias(i).every((c) => !/\d/.test(c)))
+  const soHoras = deTurmas.find((i) => i !== soDias && cheias(i).length > 0 && cheias(i).every((c) => lerHora(c.replace(/^(?:às|as)\s+/i, '')) !== null))
+  if (soDias === undefined || soHoras === undefined) return linhas.map((l) => [...l])
+  const juntar = (dias: string, hora: string) => {
+    if (!dias.trim() || !hora.trim()) return dias.trim()
+    // "seg, qua" e "seg e qua" viram "seg/qua", para a hora valer para os dois dias
+    return `${dias.trim().replace(/\s*[,;/+&]\s*|\s+e\s+/gi, '/')} ${hora.trim()}`
+  }
+  const tirar = (l: readonly string[]) => l.filter((_, i) => i !== soHoras)
+  return [
+    tirar(cabecalho),
+    ...dados.map((l) => tirar(l.map((c, i) => (i === soDias ? juntar(c, l[soHoras] ?? '') : c)))),
+  ]
+}
+
 export const mapearColunasDeAlunos = (linhas: readonly string[][]) => mapearColunas(linhas, CAMPOS_DE_ALUNO, CAMPOS_POR_POSICAO_ALUNO, inferirColunasDeAlunos)
 export const mapearColunasDeTurmas = (linhas: readonly string[][]) => mapearColunas(linhas, CAMPOS_DE_TURMA, CAMPOS_POR_POSICAO_TURMA)
 
@@ -271,6 +297,9 @@ export function lerHora(texto: string): Hora | null {
   return ehHoraValida(hora) ? hora : null
 }
 
+// uma hora como as pessoas escrevem: "7h", "7 h", "7h30", "19hs", "07:00", "07:00h"
+const HORA_ESCRITA = String.raw`(?:\d{1,2}\s*h(?:s|\d{2}(?:min)?)?|\d{1,2}:\d{2}h?)`
+
 export interface HorarioLido {
   dia: DiaDaSemana
   inicio: Hora
@@ -279,19 +308,27 @@ export interface HorarioLido {
 }
 
 /**
- * "seg 7h, qua 7h", "segunda 07:00; quarta 07:00", "seg e qua 7h", "seg/qua 7h", "ter 18h30".
- * Devolve null para o pedaço que não deu para entender.
+ * "seg 7h, qua 7h", "segunda 07:00; quarta 07:00", "seg e qua 7h", "seg/qua 7h", "ter 18h30",
+ * "seg às 18h", "Seg 8h / Qua 8h", "ter 18:00-18:50". Devolve null para o pedaço que não deu
+ * para entender.
  */
 export function lerTurmas(texto: string): (HorarioLido | null)[] {
   const pedacos = texto
-    // "seg 7h e qua 7h": o "e" depois de uma hora separa horários, como a vírgula
-    .replace(/(\d\s*h\d*|\d{1,2}:\d{2})\s+e\s+/gi, '$1, ')
+    // "seg 7h às 7h50", "ter 18:00-18:50": com começo e fim, vale o começo
+    .replace(new RegExp(`(${HORA_ESCRITA})\\s*(?:-|\u2013|a|às|as|até)\\s*(?:${HORA_ESCRITA})`, 'gi'), '$1')
+    // "seg 7h e qua 7h", "seg 8h / qua 8h": o que vem depois de uma hora separa horários, como a vírgula
+    .replace(new RegExp(`(${HORA_ESCRITA})\\s*(?:\\s[eE]\\s|[/+&|]|\\s-\\s)\\s*`, 'g'), '$1, ')
     .split(/[,;\n]+/)
     .map((p) => p.trim())
     .filter(Boolean)
   const saida: (HorarioLido | null)[] = []
   for (const pedaco of pedacos) {
-    const palavras = pedaco.split(/\s+/)
+    const palavras = pedaco
+      // "seg às 7h", "quarta a partir das 18h", "ter - 18h": as palavras entre o dia e a hora saem
+      .replace(/(^|\s)(?:a partir d[ae]s?|às|as|das|-)(?=\s)/gi, '$1')
+      // "qui 7 h": a hora com o h separado
+      .replace(/(\d)\s+(hs?)$/i, '$1$2')
+      .split(/\s+/)
     const ultima = palavras[palavras.length - 1] ?? ''
     const inicio = lerHora(ultima)
     const diasTexto = palavras.slice(0, -1).join(' ')
@@ -311,10 +348,10 @@ export function lerTurmas(texto: string): (HorarioLido | null)[] {
 
 const POR_EXTENSO: Record<string, number> = { um: 1, uma: 1, dois: 2, duas: 2, tres: 3, quatro: 4, cinco: 5, seis: 6 }
 
-/** "2", "2x", "2 vezes", "2x por semana", "3 aulas/semana", "duas" -> 2 (o texto inteiro, para "280" não virar 2) */
+/** "2", "2x", "2 vezes", "2x por semana", "2x semana", "3 aulas/semana", "duas" -> 2 (o texto inteiro, para "280" não virar 2) */
 export function lerVezes(texto: string): number | null {
   const t = normalizar(texto).replace(/\s+/g, ' ')
-  const m = /^(\d|um|uma|dois|duas|tres|quatro|cinco|seis) ?(x|vez|vezes|aula|aulas)? ?(\/ ?semana|por semana|na semana|semanais|semanal)?$/.exec(t)
+  const m = /^(\d|um|uma|dois|duas|tres|quatro|cinco|seis) ?(x|vez|vezes|aula|aulas)? ?(\/ ?semana|\/ ?sem|por semana|na semana|semana|semanais|semanal)?$/.exec(t)
   if (!m?.[1]) return null
   const n = /\d/.test(m[1]) ? Number(m[1]) : (POR_EXTENSO[m[1]] ?? 0)
   return n >= 1 && n <= 6 ? n : null
@@ -697,7 +734,7 @@ export const COMO_PREENCHER: Record<'alunos' | 'turmas', readonly [string, strin
     ['WhatsApp', 'com DDD, por exemplo (19) 90000-0000'],
     ['E-mail', 'opcional; é por ele que o aluno entra no app'],
     ['Vezes por semana', '2, 2x ou 2 vezes'],
-    ['Turmas', 'dia e hora, por exemplo seg 7h, qua 7h (a turma precisa existir)'],
+    ['Turmas', 'dia e hora, por exemplo seg 7h, qua 7h ou seg e qua às 18h (a turma precisa existir); os dias e a hora também podem vir em duas colunas'],
     ['Mensalidade', 'em reais, por exemplo 280 ou 280,00'],
     ['Forma de pagamento', 'Pix, cartão de crédito, cartão de débito, dinheiro, transferência, Gympass ou TotalPass'],
     ['Observação', 'opcional, só a equipe vê'],

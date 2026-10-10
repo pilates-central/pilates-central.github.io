@@ -145,6 +145,11 @@ export async function salvarGrade(): Promise<Resultado<{ criadas: number; recusa
     mudarRascunho({ turmasDaPrevia: [...rascunho.peek().turmasDaPrevia, ...turmas], turmasNovas: [] })
     return aceito({ criadas: turmas.length, recusadas: [] })
   }
+  // sem internet, a grade esperaria numa fila que só vive enquanto o app está aberto: melhor ficar
+  // no rascunho, na tela, até a conexão voltar
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return recusado('nada-a-fazer', 'Sem internet agora. A grade continua aqui: toque em Salvar de novo quando a internet voltar.')
+  }
   const r = await criarTurmasEmLote(novas)
   if (!r.ok) return r
   mudarRascunho({ turmasNovas: [] })

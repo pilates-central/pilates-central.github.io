@@ -38,6 +38,8 @@ export function telefoneLegivel(digitos: string): string {
 export function normalizarTelefone(texto: string): string | null {
   let d = texto.replace(/\D/g, '')
   if ((d.length === 12 || d.length === 13) && d.startsWith('55')) d = d.slice(2)
+  // "019 90000-0000": o zero de discagem antes do DDD de um celular (nenhum DDD começa com zero)
+  if (d.length === 12 && d.startsWith('0')) d = d.slice(1)
   if (d.length !== 10 && d.length !== 11) return null
   // DDD de 11 a 99; celular de 11 dígitos começa com 9 depois do DDD
   if (d.charAt(0) === '0' || d.charAt(1) === '0') return null
