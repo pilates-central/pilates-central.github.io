@@ -390,6 +390,56 @@ do Firestore não mudaram: tudo grava pelo repositório de sempre, com as mesmas
 - [ ] Conferir num iPhone de verdade: a folha de correção com o teclado, o arquivo .csv escolhido pelo app Arquivos e o colar do Numbers
 - [ ] Antes das 4h30 (Campinas) o teste de começar a usar não tem aula possível hoje e pula a chamada (anota no relatório do teste)
 
+## Revisão de produto e celular do primeiro dia (feita)
+
+A proprietária começa a usar no iPhone. Esta revisão usou o app como ela no primeiro dia, com o
+estúdio vazio nos emuladores (WebKit com iPhone 13 e Chromium com Pixel 7, com vídeo e capturas),
+comparou o app com o pedido do estúdio item a item, mediu as telas novas no celular e rodou a
+suíte inteira antes e depois, com o caminho base padrão e com `BASE_PATH=/`.
+
+### O pedido do estúdio x o app
+- [x] Gestão, não treino: nada de vídeo, cronômetro, evolução ou conquistas (conferido no código)
+- [x] Alunos por unidade (no cadastro, na lista e na importação), agenda com os alunos dentro, presença por aula, turmas fixas de 2 ou 3 vezes por semana
+- [x] Reposição: quem avisa sai do dia e entra em outra aula com vaga (pela chamada ou pela central)
+- [x] Financeiro preenchido à mão: alunos ativos por unidade, formas de pagamento (Gympass e TotalPass incluídos), recebido, previsto e em aberto, os últimos meses
+- [x] Uso pelo celular, pela administração e pelos professores, como página web instalável
+- [x] Desejável 1: o aluno avisa e remarca sozinho (app do aluno, desligado até a administração ligar); sem ele, a equipe faz por ele
+- [ ] Desejável 2, parcial por decisão: o visitante vê os horários com vaga e pede pelo WhatsApp; quem registra na agenda é a equipe. Marcar sozinho pediria gravação sem login no banco (cota e spam no plano gratuito, sem Cloud Functions)
+- [x] Gympass e TotalPass: só o caminho aberto (formas de pagamento), sem integração, como pedido
+- [x] Produto genérico: os textos da página pública vêm de Mais, Estúdio; no código fica só a marca do app
+- [x] Vários administradores, titular "Responsável" que passa a conta, rótulos sem gênero; configuração no build, sem Analytics, duas portas; dados fictícios, sem fotos com pessoas, sem ficha de saúde
+
+### Usado como a proprietária (emuladores, estúdio vazio)
+- [x] Criar a conta e confirmar: 6 toques. Guia com o estúdio, uma unidade com endereço, dois professores e 15 turmas (duas cópias de dia): 34 toques sem a importação
+- [x] Planilha de 30 linhas com 8 erros de propósito colada no guia. Na versão de antes, 4 dos 8 eram jeitos comuns de escrever que o app não lia (corrigido, abaixo); os outros 4 (WhatsApp sem DDD, aluna repetida, turma que não existe, turma cheia) apareceram com a frase certa. 7 toques depois de colar, corrigindo uma linha e tirando outra; 23 alunos entraram, 14 nas turmas
+- [x] Chamada da turma inteira: 2 toques. Achar aluno: 3. Pagamento pela linha em aberto: 3. Reposição pela central: 5. Registrar a aula experimental pelo Hoje: 5. Os mesmos números ficam conferidos em `e2e/toques.spec.ts` (iPhone SE)
+- [x] Aula experimental de ponta a ponta: registrada pelo Hoje na primeira aula com vaga, aparece na chamada, recebe presente e vira aluno com o cadastro já preenchido
+- [x] Console do navegador sem erro e nenhum pedido ao Firebase de verdade nos dois motores
+
+### Achado e corrigido
+- [x] A importação não lia "seg às 18h", "Seg 8h / Qua 8h", começo e fim da aula ("ter 18:00-18:50", "seg 7h às 7h50"), "2x semana" nem o WhatsApp com o zero antes do DDD ("019 90000-0015"); agora lê, com teste. "seg a sex 7h" continua pedindo para escrever os dias (é intervalo, e ler errado seria pior)
+- [x] Planilha com os dias numa coluna e a hora em outra ("Dias: seg e qua", "Horário: 7h"): a segunda coluna era ignorada e todas as linhas davam erro de horário; agora as duas viram uma coluna de turmas (`juntarDiasEHorario`)
+- [x] Depois de importar, corrigir o que ficou de fora obrigava a colar tudo de novo e achar as linhas no meio de 30 "já está cadastrado"; agora "Corrigir as linhas que ficaram de fora" volta à prévia só com elas
+- [x] A prévia aparecia rolada até onde estava o botão, no meio da lista, sem o título com as linhas com erro (visto nos vídeos do WebKit, iPhone 13 e SE); cada etapa da importação começa do topo
+- [x] "Conferir" ficava embaixo de três botões: com o teclado do iPhone aberto depois de colar, não estava à vista; foi para logo abaixo do campo
+- [x] Sem internet, uma planilha inteira (ou a grade do guia) ia para a fila que só vive com o app aberto; agora a tela pede conexão e nada sai dela (provado com os emuladores nos dois motores)
+- [x] A página de aula experimental e o app do aluno começam desligados, e no estúdio de verdade a página pública abria sem nenhum horário, sem nada no guia dizendo por quê; o fim do guia diz e aponta Mais, Estúdio
+- [x] Ajuda e Mais, Instalar: o Safari do iOS atual pode esconder o Compartilhar no botão de três pontinhos e pergunta "Abrir como App Web"; e o app da tela inicial não usa a sessão do Safari, então quem entrou pelo Safari entra de novo pelo ícone. Os três passos dizem isso (e o guia da equipe também)
+- [x] Na prévia, na tela de 320 px, o círculo de estado tirava a largura do texto (a frase do erro quebrava em quatro linhas); ali ele sai, a pílula já diz "pronto" ou "corrigir"
+- [x] README dizia o tipo de servidor dos testes; ficou só "máquina de 4 núcleos"
+
+### Celular
+- [x] Teste novo de fluidez das telas do primeiro dia (`e2e/movimento.spec.ts`): abrir o guia, passar de passo, abrir a grade, tocar num horário, a folha do padrão, conferir 40 linhas, a folha de correção e a Ajuda. Chromium (Pixel 7): p95 de 16,7 a 16,8 ms na velocidade normal e com a CPU 4x, CLS zero; quadro de montar de 83 ms na grade e 133 ms na prévia de 40 linhas com a CPU 4x, sem tarefa longa na velocidade normal. Números na tabela do README
+- [x] Vídeos quadro a quadro: Chromium com a CPU 4x, WebKit com iPhone 13 e com iPhone SE (320 x 568); a folha sobe e desce inteira, o guia troca de passo sem salto, a grade rola dentro da caixa no SE e a página nunca rola de lado
+- [x] Foco pelo teclado nas telas novas, nos dois motores (`foco.mjs`, fora do repositório): todos os controles com anel visível e dentro da tela; na folha de correção o foco fica preso nela
+- [x] Os specs das telas novas (guia, importação, Ajuda, fluidez) também passam no WebKit com o perfil do iPhone SE
+
+### Ficou para depois
+- [ ] A fila de "sem internet" continua só na memória. Guardar no aparelho pede guardar também o estado de antes de cada gravação (a mescla do registro da aula compara com ele); a importação e a grade agora não entram nela
+- [ ] O app não fica escutando o banco: o que outra pessoa grava aparece ao abrir de novo (herdado)
+- [ ] A planilha de verdade da proprietária pode ter um formato que ninguém previu; na prévia, as colunas podem ser trocadas à mão, mas uma coluna que mistura coisas (plano e valor juntos, por exemplo) precisa ser separada na planilha
+- [ ] Conferir num iPhone de verdade: Compartilhar e "Abrir como App Web" na versão do iOS dela, colar do Numbers e do Excel no campo grande com o teclado aberto, a tela de abertura e o login pelo ícone depois de instalar
+
 ## Notas para quem continuar
 
 - **Seções da aba Alunos:** as três seções dividem a chave de tela (`chaveDaTelaDe` em `src/app/navegacao.ts`, `SECOES_DA_ABA`); `Alunos.tsx` renderiza o cabeçalho (`CabecaDeAlunos`) e o conteúdo num `QuadroDeTela` com a classe `secao-quadro`. Conteúdo de seção é um `div.tela` sem cabeçalho. Nos testes, `irParaSecao` espera a marca (`esperarSemAnimacao('.secoes-marca')`, cujo repouso não é transform zero) e o quadro.
@@ -433,3 +483,7 @@ do Firestore não mudaram: tudo grava pelo repositório de sempre, com as mesmas
 - **Fila sem internet:** `salvarOuEnfileirar` em `estado.ts`; a demonstração nunca entra na fila. Para testar, `context.setOffline(true)` antes de marcar e `false` depois (o evento `online` anda a fila; o intervalo de 20 s cobre o motor que não o dispara).
 - **Regras velhas no teste:** `trocarRegras(projeto, texto)` (`e2e/firebase/contas.ts`) troca as regras só de um projeto do emulador; devolva as do arquivo num `finally`.
 - **Ajuda:** mudou um card em `conteudoDaAjuda.ts`? Mude o mesmo texto em `docs/guia-da-equipe.md` (o teste compara).
+- **Importação, jeitos de escrever:** turmas passam por `lerTurmas` (começo e fim da aula viram só o começo; o que vem depois de uma hora separa horários; "às" sai), o plano por `lerVezes`, o telefone por `normalizarTelefone` (o zero antes do DDD só no celular de 12 dígitos). Duas colunas de turmas no cabeçalho (só dias e só horas) viram uma em `juntarDiasEHorario`, antes do mapeamento. Jeito novo: teste em `importacao.test.ts` primeiro.
+- **Perfil do iPhone SE nos testes:** uma configuração do Playwright em `.mjs` (o carregador não tira tipos de arquivo em `node_modules`) com um projeto chamado `webkit` e `devices['iPhone SE']`, apontando `testDir` para `e2e`, roda os specs do celular nos 320 x 568 sem mexer em `playwright.config.ts`.
+- **Contêineres ao mesmo tempo:** monte as pastas com `:z` (rótulo compartilhado), não `:Z`: um contêiner novo com `:Z` rerrotula a pasta e o outro, já rodando, perde o acesso. E espere "All emulators ready" no log do `firebase emulators:start`: o de login começa a ouvir depois do Firestore.
+- **Logs dos emuladores:** `firebase-debug.log` registra o ambiente inteiro do shell que rodou o comando; está no `.gitignore` e não pode ser versionado nem colado em lugar nenhum.

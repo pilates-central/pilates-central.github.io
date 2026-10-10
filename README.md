@@ -126,11 +126,15 @@ tela inicial sem loja e funciona sem internet no modo demonstração.
   Google Planilhas ou do Numbers, ou escolher o arquivo .csv (o do Excel em português, com ponto e
   vírgula e acentos, também). Com ou sem cabeçalho: as colunas são reconhecidas pelo nome em
   português ("Celular", "Plano", "Horários", "Valor (R$)", "Como paga"...) ou, sem cabeçalho, pelo
-  que têm dentro; a que sobrar a pessoa diz o que é. A prévia mostra cada linha, as com erro
-  primeiro (WhatsApp sem DDD, turma que não existe, aluno repetido, turma cheia), e a correção é
-  feita ali mesmo, numa folha com os campos do cadastro, ou a linha sai da lista. Grava em lote,
-  diz quantos entraram, quantos já estão nas turmas e quem ficou de fora, e tem "Desfazer a
-  importação". O modelo em branco (só o cabeçalho) baixa num toque.
+  que têm dentro; a que sobrar a pessoa diz o que é. As turmas podem vir do jeito que se escreve
+  ("seg 7h, qua 7h", "seg e qua às 18h", "Seg 8h / Qua 8h", "ter 18:00-18:50") ou com os dias numa
+  coluna e a hora em outra; o plano como "2x" ou "2x semana"; o WhatsApp com ou sem o zero antes
+  do DDD. A prévia começa do topo e mostra cada linha, as com erro primeiro (WhatsApp sem DDD,
+  turma que não existe, aluno repetido, turma cheia), e a correção é feita ali mesmo, numa folha
+  com os campos do cadastro, ou a linha sai da lista. Grava em lote (com internet: sem ela, a
+  planilha espera a conexão em vez de ir para a fila), diz quantos entraram, quantos já estão nas
+  turmas e quem ficou de fora, com "Corrigir as linhas que ficaram de fora" (volta à prévia só com
+  elas) e "Desfazer a importação". O modelo em branco (só o cabeçalho) baixa num toque.
 - **Ajuda (Mais, Ajuda):** cards curtos: pôr o app na tela inicial (iPhone, com o desenho do
   caminho, e Android), chamada, reposição, pagamento, convidar alguém, o que o professor e o aluno
   veem, sem internet e privacidade. O mesmo texto está em
@@ -158,6 +162,8 @@ Digitar na busca e rolar não contam.
 | Lançar pagamento | 3 ou 4 | **Financeiro**, **Lançar** na linha em aberto, **Lançar R$**; ou **Lançar pagamento**, o aluno (quem deve vem primeiro), **Lançar R$** |
 | Encaixar reposição | 5 | **Alunos**, **Reposições**, **Encaixar**, a aula, confirmar; ou na chamada: **Avisou**, **Encaixar em outro horário**, a aula, confirmar |
 | O aluno remarca a própria aula | 5 | **Não vou poder ir**, **Avisar que não vou**, **reposições para marcar**, a aula, **Confirmar reposição** |
+| Registrar quem pediu a aula experimental | 5 | Hoje: **Registrar aula experimental**, a aula, Nome, WhatsApp, **Registrar** |
+| Importar 30 alunos de uma planilha | 2 a 7 depois de colar | **Conferir**, **Importar**; corrigir uma linha são 3 (a linha, o campo, **Salvar correção**), tirar uma são 2 (a linha, **Tirar da lista**) |
 | Visitante pede a aula experimental | 1 a 3 | **Falar no WhatsApp**; ou **Ver os horários com vaga**, o horário, **Pedir no WhatsApp** |
 
 ### Quem vê o quê
@@ -202,10 +208,12 @@ O caminho do primeiro dia com o estúdio de verdade, o mesmo que o teste
 `e2e/comecando.spec.ts` faz nos dois motores, com os emuladores do Firebase.
 
 1. **Antes (quem cuida do projeto):** as regras publicadas e a lista de verificação do console em
-   [docs/firebase.md](docs/firebase.md). As regras não mudaram nesta etapa.
-2. **Primeiro acesso:** no celular, abrir o site, **Entrar**, **Primeiro acesso? Criar conta** com
-   o e-mail combinado nas regras, confirmar pelo link do e-mail e tocar em **Já confirmei**. O app
-   pede o seu nome e o nome do estúdio: **Começar**.
+   [docs/firebase.md](docs/firebase.md). Cada mudança em `firestore.rules` pede publicar de novo.
+2. **Primeiro acesso:** no iPhone, pôr o site na tela inicial antes (Compartilhar, Adicionar à
+   Tela de Início) e fazer o primeiro acesso pelo ícone: o app da tela inicial guarda a sessão à
+   parte do Safari, e quem entra pelo Safari precisa entrar de novo depois de instalar. **Entrar**,
+   **Primeiro acesso? Criar conta** com o e-mail combinado nas regras, confirmar pelo link do
+   e-mail e tocar em **Já confirmei**. O app pede o seu nome e o nome do estúdio: **Começar**.
 3. **O guia abre sozinho** (estúdio vazio): o estúdio e o WhatsApp; a unidade (o nome do bairro
    serve); os professores, com nome e e-mail (o convite sai depois, pelo WhatsApp); a grade da
    semana, tocando nos horários de um dia e copiando para os outros; e os alunos.
@@ -214,7 +222,9 @@ O caminho do primeiro dia com o estúdio de verdade, o mesmo que o teste
    Sem planilha, cadastrar um a um depois, em Alunos, Novo aluno.
 5. **Equipe:** em Mais, Equipe, **Convidar pessoa**; na ficha da pessoa, **Mandar o convite pelo
    WhatsApp**. Ela cria a conta com aquele e-mail e entra.
-6. **Instalar no celular** e o resto do dia a dia: Mais, Ajuda (o mesmo texto em
+6. **Página de aula experimental e app do aluno:** começam desligados (o fim do guia lembra);
+   ligar em Mais, Estúdio, junto com a frase, os focos, o endereço e o Instagram da página.
+7. **Instalar no celular** e o resto do dia a dia: Mais, Ajuda (o mesmo texto em
    [docs/guia-da-equipe.md](docs/guia-da-equipe.md), para mandar à equipe).
 
 Toques contados pelo teste (iPhone 13 e Pixel 7; tocar num campo para escrever conta, digitar e
@@ -229,9 +239,11 @@ colar não):
 | Convidar uma administradora (nome, e-mail, telefone, papel) | 8, mais 1 para mandar pelo WhatsApp |
 | A administradora cria a conta e entra, em outro aparelho | 6 |
 
-No mesmo teste: a chamada feita sem internet entra na fila e grava quando a conexão volta; com
-regras de uma versão anterior no emulador, a frase pede para publicar as regras novas; e a
-administradora que perdeu o acesso lê "Sua conta não tem esse acesso".
+No mesmo teste: a planilha não é importada sem internet (a tela pede conexão e nada vai para o
+banco); a chamada feita sem internet entra na fila e grava quando a conexão volta; com regras de
+uma versão anterior no emulador, a frase pede para publicar as regras novas; a administradora que
+perdeu o acesso lê "Sua conta não tem esse acesso"; e o fim do guia diz que a página de aula
+experimental e o app do aluno começam desligados.
 
 ## Decisões
 
@@ -315,12 +327,23 @@ Medições no Chromium (perfil Pixel 7), p95 dos intervalos entre quadros durant
 | Aluno: troca de aba | 16,8 ms | 16,8 ms | 100 ms |
 | Página pública: troca de dia pela faixa | 16,8 ms | 16,7 a 16,8 ms | 17 a 33 ms |
 | Página pública: escolher o horário | 16,7 ms | 16,7 a 16,8 ms | 16,7 ms |
+| Guia: abrir e passar de passo | 16,7 ms | 16,8 ms | 33 ms |
+| Guia: abrir a grade da semana | 16,7 ms | 16,8 ms | 83 ms |
+| Guia: tocar num horário da grade | 16,7 ms | 16,7 ms | 16,7 ms |
+| Guia: abrir a folha do padrão das turmas | 16,7 ms | 16,8 ms | 33 ms |
+| Importação: conferir 40 linhas (prévia em partes) | 16,8 ms | 16,8 ms | 133 ms |
+| Importação: abrir a folha de correção | 16,8 ms | 16,7 ms | 50 ms |
+| Abrir a Ajuda | 16,7 ms | 16,7 ms | 33 ms |
 
 Com a CPU 4x mais lenta foram duas rodadas; "quadro de montar" é o quadro em que a tela nova é
 montada e pintada, antes de a animação começar. Os vídeos das transições (`GRAVAR=1`) foram
-olhados quadro a quadro nos dois motores.
+olhados quadro a quadro nos dois motores. As telas do primeiro dia (guia, grade, importação,
+folha de correção e Ajuda) foram medidas na revisão de produto e celular, com a régua do ambiente
+em 16,7 ms. Numa rodada com a máquina disputada (régua de 33 ms com a CPU 4x), as telas antigas
+também passaram do limite (abrir a lista de alunos com quadro de montar de 350 ms) e as novas
+ficaram na mesma faixa (abrir a grade, 316 ms): é a máquina, não a tela.
 
-Medido no contêiner do Playwright, num servidor ARM de 4 núcleos dividido com outros processos.
+Medido no contêiner do Playwright, numa máquina de 4 núcleos dividida com outros processos.
 No WebKit desse contêiner não há GPU e tudo é pintado na CPU: até a régua (uma camada sem nada do
 app animando só transform e opacity) dá p95 de 50 a 190 ms conforme a carga da máquina. Lá os
 tempos ficam registrados no relatório do teste, e o que reprova é animar outra propriedade.
@@ -441,8 +464,8 @@ npm run regras     # regras do Firestore no emulador (precisa de Java 21 e fireb
 npm run e2e        # Playwright: Chromium (Pixel 7) e WebKit (iPhone 13)
 ```
 
-Os testes de ponta a ponta usam a versão publicada localmente (`npm run build` antes). Em Linux
-ARM, onde o WebKit não instala direto, dá para rodar pelo contêiner oficial do Playwright:
+Os testes de ponta a ponta usam a versão publicada localmente (`npm run build` antes). Onde o
+WebKit do Playwright não instala direto, dá para rodar pelo contêiner oficial do Playwright:
 
 ```bash
 npm run preview &
@@ -574,7 +597,10 @@ as listas em partes, a marca das seções deslizando e o caminho base vindo do a
 site mudar de endereço sem mexer no código). Por fim, pronto para usar: o guia de primeiro uso
 com a grade visual, a importação de alunos e turmas por planilha, a ajuda dentro do app (e o guia
 da equipe em texto), estados vazios que levam à ação e gravação que diz o que fazer sem internet
-ou com a recusa do banco, conferidos como quem usa, com os emuladores. Detalhes e o que falta em
+ou com a recusa do banco, conferidos como quem usa, com os emuladores. Uma revisão de produto e
+celular do primeiro dia usou o app como a proprietária num estúdio vazio, com uma planilha cheia de
+erros de propósito, e fez a importação ler a planilha como ela vem, a ajuda do iPhone seguir o
+Safari de agora e o fim do guia dizer o que começa desligado. Detalhes e o que falta em
 [docs/roteiro.md](docs/roteiro.md).
 
 ## Créditos
