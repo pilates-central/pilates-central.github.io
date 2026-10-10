@@ -50,7 +50,10 @@ describe('política de segurança do site', () => {
     expect(regras).toContain('frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/')
     expect(regras.find((r) => r.startsWith('connect-src'))).toContain('https://content-firebaseappcheck.googleapis.com')
     expect(regras).toContain("style-src 'self'")
-    expect(regras.join('; ')).not.toMatch(/unsafe-inline|googletagmanager|google-analytics/)
+    // a política própria do reCAPTCHA; sem ela, ele quebra na política padrão do app
+    expect(regras).toContain('trusted-types default goog#html')
+    expect(regras).toContain("require-trusted-types-for 'script'")
+    expect(regras.join('; ')).not.toMatch(/unsafe-inline|googletagmanager|google-analytics|allow-duplicates/)
   })
 
   it('cada script embutido vira um hash', () => {

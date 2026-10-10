@@ -147,7 +147,10 @@ export function servicoOffline(): Plugin {
 // configurado no build, o app conversa com o login e com o Firestore (por REST, no SDK "lite");
 // sem projeto, nem isso é liberado. Com o App Check, entram só os endereços do reCAPTCHA v3 e
 // da troca de token. Trusted Types: HTML e endereços de script por texto só passam pela
-// política padrão do app (src/app/confianca.ts); quem não suporta ignora a diretiva.
+// política padrão do app (src/app/confianca.ts); quem não suporta ignora a diretiva. O script do
+// reCAPTCHA cria a própria política ('goog#html', da biblioteca do Google) para montar o que
+// ele desenha; sem ela no "trusted-types", ele caía na política padrão do app, que recusa HTML
+// por texto, quebrava, e o App Check ficava sem token fora de localhost.
 const DO_FIREBASE = [
   'https://identitytoolkit.googleapis.com',
   'https://securetoken.googleapis.com',
@@ -158,6 +161,7 @@ const DO_APP_CHECK = {
   script: ['https://www.google.com/recaptcha/', 'https://www.gstatic.com/recaptcha/'],
   frame: ['https://www.google.com/recaptcha/', 'https://recaptcha.google.com/recaptcha/'],
   connect: ['https://content-firebaseappcheck.googleapis.com'],
+  politicas: ['goog#html'],
 }
 
 export interface OpcoesDaPolitica {
@@ -185,7 +189,7 @@ export function regrasDaPolitica({ comFirebase, comAppCheck, hashes }: OpcoesDaP
     "form-action 'self'",
     "object-src 'none'",
     "require-trusted-types-for 'script'",
-    'trusted-types default',
+    `trusted-types ${['default', ...(comAppCheck ? DO_APP_CHECK.politicas : [])].join(' ')}`,
   ]
 }
 
