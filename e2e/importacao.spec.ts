@@ -81,6 +81,8 @@ test.describe('importar de uma planilha', () => {
 
   test('importa o que está pronto e depois corrige só o que ficou de fora; dias e hora em duas colunas', async ({ page }) => {
     await abrirImportacao(page)
+    // com a tela rolada para baixo (como fica depois de colar no celular), a prévia começa do topo
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight))
     await colar(
       page,
       [
@@ -92,7 +94,8 @@ test.describe('importar de uma planilha', () => {
       ].join('\n'),
     )
     // os dias e a hora viraram uma coluna só de turmas; o zero antes do DDD não atrapalha
-    await expect(page.getByRole('heading', { name: '2 alunos prontos, 2 linhas com erro' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: '2 alunos prontos, 2 linhas com erro' })).toBeInViewport()
+    expect(await page.evaluate(() => window.scrollY)).toBe(0)
     await expect(page.getByRole('button', { name: /Colunas: Nome, WhatsApp, Turmas \(dia e hora\), Mensalidade/ })).toBeVisible()
     await expect(linha(page, 1)).toContainText('sáb 9h')
     await expect(linha(page, 4)).toContainText('Não existe turma de domingo às 10h nesta unidade.')

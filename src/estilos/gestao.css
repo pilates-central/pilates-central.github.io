@@ -305,6 +305,13 @@
   height: 36px;
   border-radius: 50%;
 }
+/* prévia da importação na tela de 320 px: a pílula (pronto ou corrigir) já diz o estado, e o
+   texto da linha ganha a largura do círculo */
+@media (max-width: 359px) {
+  .lista-previa .marca-presenca {
+    display: none;
+  }
+}
 .marca-presenca--presente {
   background: var(--success-surface);
   color: var(--success);

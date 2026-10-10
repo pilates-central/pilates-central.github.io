@@ -3,7 +3,7 @@
 // src/dominio/importacao.ts; aqui é só a tela.
 import { Fragment } from 'preact'
 import type { ComponentChildren, JSX } from 'preact'
-import { useMemo, useState } from 'preact/hooks'
+import { useEffect, useMemo, useRef, useState } from 'preact/hooks'
 import { baixarArquivo } from '../../app/baixar'
 import { voltar } from '../../app/navegacao'
 import { pode } from '../../app/perfil'
@@ -52,6 +52,21 @@ import type { RascunhoTurma } from '../../dominio/turmas'
 import { SemAcesso } from '../mais/SemAcesso'
 
 type Etapa = 'colar' | 'previa' | 'feito'
+
+/**
+ * Cada etapa (colar, prévia, resumo) começa do topo: sem isso a prévia aparecia rolada até onde
+ * estava o botão Conferir, no meio da lista, sem o título que diz quantas linhas têm erro.
+ */
+function useTopoACadaEtapa(etapa: Etapa): void {
+  const primeira = useRef(true)
+  useEffect(() => {
+    if (primeira.current) {
+      primeira.current = false
+      return
+    }
+    window.scrollTo(0, 0)
+  }, [etapa])
+}
 
 /** Um .csv do Excel em português costuma vir em Windows-1252: tenta UTF-8 e cai para ele. */
 async function lerArquivo(arquivo: File): Promise<string> {
@@ -274,6 +289,7 @@ export function ImportarAlunos({ embutido = false, previa = false, aoConcluir }:
   }, [linhas, mapa, ctx, ajustes, tirados])
   const ordenados = useMemo(() => (resultado ? errosPrimeiro(resultado.lidos) : []), [resultado])
   const visiveisAgora = useEmPartes(ordenados.length, 12, 12)
+  useTopoACadaEtapa(etapa)
 
   if (!pode('editar-alunos') || !b) return <SemAcesso titulo="Importar alunos" texto="Só a administração cadastra alunos." />
 
@@ -359,7 +375,7 @@ export function ImportarAlunos({ embutido = false, previa = false, aoConcluir }:
           {comErro > 0 && (
             <p class="texto-secundario">As linhas com erro vêm primeiro. Toque numa para corrigir ali mesmo ou tirar da lista; o que tiver erro fica de fora.</p>
           )}
-          <ul class="lista" aria-label="Prévia da planilha">
+          <ul class="lista lista-previa" aria-label="Prévia da planilha">
             {ordenados.slice(0, visiveisAgora).map((l) => (
               <li key={l.linha}>
                 <LinhaDeAlunoLido lido={l} aoTocar={() => setCorrigindo(l.linha)} />
@@ -645,6 +661,7 @@ export function ImportarTurmas() {
     return conferirTurmas(lidas, ctx, idNovo)
   }, [linhas, mapa, ctx, tiradas, ajustes])
   const ordenadas = useMemo(() => (resultado ? errosPrimeiro(resultado.lidas) : []), [resultado])
+  useTopoACadaEtapa(etapa)
 
   if (!pode('editar-turmas') || !b) return <SemAcesso titulo="Importar turmas" texto="Só a administração cria turmas." />
 
@@ -702,7 +719,7 @@ export function ImportarTurmas() {
             {comErro > 0 ? `, ${plural(comErro, 'linha com erro', 'linhas com erro')}` : ''}
           </h2>
           {comErro > 0 && <p class="texto-secundario">As linhas com erro vêm primeiro. Toque numa para corrigir ou tirar da lista.</p>}
-          <ul class="lista" aria-label="Prévia da planilha">
+          <ul class="lista lista-previa" aria-label="Prévia da planilha">
             {ordenadas.map((l) => (
               <li key={l.linha}>
                 <LinhaDeTurmaLida lida={l} aoTocar={() => setCorrigindo(l.linha)} />
