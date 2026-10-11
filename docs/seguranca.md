@@ -262,7 +262,7 @@ O app não consegue conferir nem mudar nada disto; a lista de verificação com 
 [firebase.md](firebase.md):
 
 - Authentication iniciado ("Começar"): sem isso a criação de conta falha e nenhum e-mail chega.
-- E-mail/senha ligado; domínios `kohijow.github.io` e `pilates-central.github.io` autorizados;
+- E-mail/senha ligado; domínio `pilates-central.github.io` autorizado;
   modelos de e-mail em português.
 - Proteção contra enumeração de e-mails ligada; política de senha com mínimo 8.
 - Regras publicadas com o e-mail do primeiro acesso trocado (e republicadas a cada mudança no

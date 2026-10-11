@@ -322,6 +322,7 @@ e o site vai para a raiz de `pilates-central.github.io`). O repositório antigo 
 ### Caminho base
 - [x] `BASE_PATH` numa fonte só (`scripts/caminho-base.ts`): build, manifesto (id, start_url, scope), service worker, telas de abertura, Playwright e testes de ponta a ponta leem o mesmo valor; o workflow deriva do nome do repositório (`/` quando termina em `.github.io`); suíte inteira rodada com `/pilates-central-web/` e com `/`
 - [x] README e docs com os dois endereços: o novo (`https://pilates-central.github.io/`) como principal, o antigo até a transferência
+- [x] Transferência feita: o repositório passou para a organização `pilates-central` com o nome `pilates-central.github.io`, o Pages por Actions e as seis variáveis `FIREBASE_*` vieram junto, e o workflow publica na raiz com `BASE_PATH=/`. README e docs só com o endereço novo
 
 ### Achado e corrigido no trabalho que veio pela metade
 - [x] "Registrar aula experimental" no Hoje ficava dentro do bloco do dia com aulas: no sábado da professora (sem aula) o botão não existia e o teste com os emuladores esperava para sempre. Agora aparece também no dia sem aula

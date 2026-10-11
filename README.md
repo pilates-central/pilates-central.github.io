@@ -9,9 +9,9 @@ o estúdio vê os horários com vaga para uma aula experimental.
 - **Página de aula experimental:** https://pilates-central.github.io/experimental/
 - **Aviso de privacidade:** https://pilates-central.github.io/privacidade/
 
-Até o repositório passar para a organização do estúdio, o site vive em
-https://kohijow.github.io/pilates-central-web/ (com `experimental/` e `privacidade/` no mesmo
-caminho); depois da transferência esse endereço some.
+O repositório fica na organização do estúdio (`pilates-central`) e o site é publicado na raiz
+desse endereço. O endereço antigo, em `kohijow.github.io/pilates-central-web/`, deixou de existir
+com a transferência.
 
 <p>
   <img src="docs/telas/entrar.webp" alt="Entrada da demonstração: administração, professor ou aluno" width="200">

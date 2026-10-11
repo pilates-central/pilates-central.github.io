@@ -5,8 +5,7 @@ professores. Cada bloco cabe numa mensagem: copie do título até a linha em bra
 Os títulos entre asteriscos saem em negrito no WhatsApp. O que diz "(administração)" é só para
 quem administra; os professores não têm essas telas.
 
-Endereço do app: https://pilates-central.github.io/ (até a mudança de endereço,
-https://kohijow.github.io/pilates-central-web/).
+Endereço do app: https://pilates-central.github.io/
 
 *Pôr o app na tela inicial*
 

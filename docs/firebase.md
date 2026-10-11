@@ -31,9 +31,8 @@ verdade) e **Ver demonstração**.
    fica desligado). Com o Authentication iniciado mas este método desligado, o app mostra a mesma
    frase, com `auth/operation-not-allowed` em Detalhes.
 3. Authentication, Configurações:
-   - **Domínios autorizados:** acrescente `kohijow.github.io` (onde o site está publicado hoje)
-     e `pilates-central.github.io` (o endereço definitivo, quando o repositório passar para a
-     organização do estúdio). O `localhost` já vem na lista. Hoje o login por e-mail e senha
+   - **Domínios autorizados:** acrescente `pilates-central.github.io` (onde o site está
+     publicado). O `localhost` já vem na lista. Hoje o login por e-mail e senha
      não depende dessa lista (o app não usa login do Google nem link de volta nos e-mails), mas
      ela vale para o que vier depois; se o Firebase recusar o endereço, o app mostra "Este
      endereço do site não está autorizado no Firebase". Quem barra o uso da configuração em
@@ -93,7 +92,7 @@ site não publica regras sozinho.
 4. **Restrinja a chave do navegador.** No Google Cloud Console (o projeto Firebase aparece lá com
    o mesmo nome), APIs e serviços, Credenciais, abra a chave "Browser key (auto created by
    Firebase)":
-   - Restrições de aplicativo: **Sites** (referenciadores HTTP), com `https://kohijow.github.io/*`,
+   - Restrições de aplicativo: **Sites** (referenciadores HTTP), com
      `https://pilates-central.github.io/*` e, se for testar no computador com o projeto real,
      `http://localhost:*/*`.
    - Restrições de API: **Identity Toolkit API**, **Token Service API** e **Cloud Firestore API**
@@ -136,7 +135,7 @@ até existir a chave. Tudo abaixo é feito por quem cuida do projeto; nada disso
 
 1. **As duas chaves do reCAPTCHA v3** saem do console do reCAPTCHA, não do Firebase: abra
    `https://www.google.com/recaptcha/admin/create` com a mesma conta Google do projeto. Rótulo:
-   o nome do estúdio. Tipo: **Baseado em pontuação (v3)**. Domínios: `kohijow.github.io` e
+   o nome do estúdio. Tipo: **Baseado em pontuação (v3)**. Domínio:
    `pilates-central.github.io` (só o nome, sem `https://` nem caminho). Aceite os termos e
    envie. A página mostra a **chave do site** (vai para o site) e a **chave secreta** (vai para
    o Firebase). O `localhost` não precisa entrar: no computador vale o token de depuração
@@ -207,8 +206,7 @@ Para o resto, e para mexer depois, em **Mais**:
    console, Authentication, Usuários, procure o e-mail e exclua. Em Mais, **Registro de
    alterações**, fica anotado quem excluiu e quando (só com o código do aluno).
 
-A página pública fica em `https://pilates-central.github.io/experimental/` (até a transferência
-do repositório, em `https://kohijow.github.io/pilates-central-web/experimental/`). Ela só lê um
+A página pública fica em `https://pilates-central.github.io/experimental/`. Ela só lê um
 documento com horários e vagas (sem nomes), que o app da equipe atualiza sozinho a cada abertura
 e a cada mudança na agenda.
 
@@ -230,7 +228,7 @@ console do Firebase, salvo onde diz Google Cloud ou GitHub.
       conta falha e nenhum e-mail chega; o app diz que o login não foi ativado.
 - [ ] **E-mail/senha ligado**: Authentication, Método de login, E-mail/senha = Ativado.
 - [ ] **Domínios autorizados**: Authentication, Configurações, Domínios autorizados tem
-      `kohijow.github.io` e `pilates-central.github.io`.
+      `pilates-central.github.io`.
 - [ ] **Modelos em português**: Authentication, Modelos, idioma = Português (Brasil).
 - [ ] **Proteção contra enumeração de e-mails ligada**: Authentication, Configurações, Ações do
       usuário (ou "Proteção de e-mail"), "Proteção contra enumeração de e-mail" = ligada.
@@ -238,8 +236,8 @@ console do Firebase, salvo onde diz Google Cloud ou GitHub.
 - [ ] **Regras publicadas** com o e-mail do primeiro acesso trocado: Firestore Database, Regras,
       a primeira linha útil mostra `rules_version = '2'` e `emailDoPrimeiroAcesso()` devolve o
       e-mail certo.
-- [ ] **Chave de API restrita** (Google Cloud, APIs e serviços, Credenciais): sites
-      `https://kohijow.github.io/*` e `https://pilates-central.github.io/*`; APIs Identity
+- [ ] **Chave de API restrita** (Google Cloud, APIs e serviços, Credenciais): site
+      `https://pilates-central.github.io/*`; APIs Identity
       Toolkit, Token Service, Cloud Firestore (e App Check, quando ligado).
 - [ ] **Variáveis no GitHub** (Settings, Secrets and variables, Actions, Variables): as seis
       `FIREBASE_*` e, com o App Check, `FIREBASE_APPCHECK_SITE_KEY`; o último workflow da `main`
