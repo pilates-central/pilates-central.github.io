@@ -121,12 +121,12 @@ trabalho precisa saber. Atualizar a cada entrega.
 
 ### Ficou para depois
 - [ ] Publicar as regras no projeto real e fazer o primeiro acesso (passo a passo em [firebase.md](firebase.md)); conferir no primeiro acesso real que o console do navegador não mostra erro de política de segurança
-- [ ] Preencher as variáveis `FIREBASE_*` do repositório no GitHub (sem elas, o site publicado fica só com a demonstração)
+- [x] Preencher as variáveis `FIREBASE_*` do repositório no GitHub (sem elas, o site publicado fica só com a demonstração): as seis existem e entram no build
 - [ ] Limite de reposições por mês também nas regras (hoje só o app confere)
 - [x] Aviso de "versão nova disponível" do service worker (revisão de login e segurança)
 - [ ] Cancelar o dia inteiro de uma vez (feriado móvel)
 - [ ] Medir a View Transition num iPhone de verdade
-- [ ] Deixar o caminho aberto para Gympass (Wellhub) e TotalPass, sem integrar agora (as formas de pagamento já existem)
+- [x] Deixar o caminho aberto para Gympass (Wellhub) e TotalPass, sem integrar agora (as formas de pagamento já existem)
 - [x] Aula experimental na agenda (feita nas pendências de produto, abaixo): `RegistroAula.experimentais`, participante com origem `experimental`, "Registrar aula experimental" na chamada e no Hoje, vagas e página pública recalculadas, esquema nas regras com teste, "Cadastrar como aluno" com o cadastro preenchido
 - [x] Textos da página pública configuráveis em Mais, Estúdio (idem): frase, focos, endereço, link do mapa e Instagram em `Configuracao` e em `publico/estudio`, com o esquema das regras
 
@@ -510,7 +510,7 @@ tocado.
 - **Trava do Firebase real:** importe `test` e `expect` de `e2e/base.ts`, nunca de `@playwright/test`: a trava corta e reprova qualquer pedido para domínios do Google.
 - **Projeto configurado no build:** com as variáveis `FIREBASE_*`, a tela inicial vira as duas portas. Os testes da demonstração abrem com `?demo` (ver `abrirApp`) para valer com ou sem projeto.
 - **Desfazer:** ações de cadastro passam por `gravarComDesfazer` com um inverso calculado na hora de desfazer (por exemplo, tirar da turma só o aluno colocado). No Firebase, alunos fixos com `arrayUnion`/`arrayRemove` para duas pessoas não apagarem a mudança uma da outra.
-- **Dados da demonstração:** versão 3 (`VERSAO_DO_BANCO`): app do aluno e página pública ligados, seis alunos com acesso (Beatriz Barbosa, a-11, é a dos testes) e o endereço do Centro igual ao do estúdio. Quem tinha versão anterior no aparelho ganha dados novos ao abrir. As três semanas recentes são as mesmas da etapa 1 (os testes conhecem: sexta 9/10, 18h com Camila tem 5 de 6; Ana Almeida tem 4 ausências seguidas; outubro tem R$ 10.660,00 previstos e R$ 5.590,00 recebidos).
+- **Dados da demonstração:** versão 5 (`VERSAO_DO_BANCO`): app do aluno e página pública ligados, seis alunos com acesso (Beatriz Barbosa, a-11, é a dos testes), endereço fictício nas duas unidades e uma aula experimental registrada no sábado de manhã do Centro. Quem tinha versão anterior no aparelho ganha dados novos ao abrir. As três semanas recentes são as mesmas da etapa 1 (os testes conhecem: sexta 9/10, 18h com Camila tem 5 de 6; Ana Almeida tem 4 ausências seguidas; outubro tem R$ 10.660,00 previstos e R$ 5.590,00 recebidos).
 - **Telas em teste:** para esperar uma tela nova parar, `esperarParado(page, '.tela-quadro')`; `irPara(page, '#/rota')` abre pelo endereço; `irParaSecao` troca Alunos, Turmas e Reposições.
 
 - **Guia de primeiro uso:** passos em `PASSOS` (`src/dominio/montagem.ts`), uma rota por passo (`#/mais/montar/<passo>`, trocados com `trocarTela`, sem empilhar: o "voltar" do celular sai do guia). O rascunho (`src/telas/montar/estadoDaMontagem.ts`) é um sinal do módulo, vivo enquanto o app está aberto: no modo real cada passo grava na hora, menos a grade, que espera "Salvar a grade"; na demonstração tudo fica no rascunho (`previa`). `abrirGuiaSePreciso` (`src/app/guia.ts`) roda ao entrar na conta; "visto" fica no `localStorage` do aparelho.
