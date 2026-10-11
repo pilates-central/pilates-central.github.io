@@ -57,6 +57,48 @@ test.describe('celular', () => {
     expect(Math.abs(peDepois - altura)).toBeLessThan(2)
   })
 
+  test('teclado na folha de correção da importação: o WhatsApp e o Salvar correção ficam acima dele', async ({ page }) => {
+    // a mesma janela visual falsa do teste de cima: no iPhone o teclado só encolhe a janela visual
+    await page.addInitScript(() => {
+      const visual = new EventTarget()
+      let teclado = 0
+      Object.defineProperties(visual, {
+        height: { get: () => window.innerHeight - teclado },
+        width: { get: () => window.innerWidth },
+        offsetTop: { get: () => 0 },
+        offsetLeft: { get: () => 0 },
+        scale: { get: () => 1 },
+      })
+      Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => visual })
+      ;(window as unknown as { __teclado: (px: number) => void }).__teclado = (px: number) => {
+        teclado = px
+        visual.dispatchEvent(new Event('resize'))
+      }
+    })
+    await entrarComoAdministracao(page)
+    await irPara(page, '#/alunos/importar')
+    await page.getByLabel('Cole aqui as linhas da planilha').fill('Nome\tWhatsApp\nAna Teclado\t9000-0060\nBia Teclado\t(11) 90000-0061')
+    await page.getByRole('button', { name: 'Conferir' }).click()
+    await page.locator('[data-erro="sim"]').first().click()
+    await esperarFolhaParada(page)
+    const whatsapp = folha(page).getByLabel('WhatsApp')
+    await whatsapp.focus()
+    const altura = await page.evaluate(() => window.innerHeight)
+    const TECLADO = Math.round(altura * 0.4)
+    await page.evaluate((px) => (window as unknown as { __teclado: (px: number) => void }).__teclado(px), TECLADO)
+    await expect(page.locator('.folha[data-teclado]')).toHaveCount(1)
+    await esperarFolhaParada(page)
+    const campo = await whatsapp.boundingBox()
+    expect(campo?.y ?? -1).toBeGreaterThanOrEqual(0)
+    expect((campo?.y ?? 0) + (campo?.height ?? 0)).toBeLessThanOrEqual(altura - TECLADO + 1)
+    const salvar = await folha(page).getByRole('button', { name: 'Salvar correção' }).boundingBox()
+    expect((salvar?.y ?? 0) + (salvar?.height ?? 0)).toBeLessThanOrEqual(altura - TECLADO + 1)
+    // corrige com o teclado aberto e a linha fica pronta
+    await whatsapp.fill('(11) 90000-0060')
+    await folha(page).getByRole('button', { name: 'Salvar correção' }).click()
+    await expect(page.getByRole('heading', { name: '2 alunos prontos', exact: true })).toBeVisible()
+  })
+
   test('as fontes baixam uma vez só (a pré-carga casa com o pedido do CSS em cada motor)', async ({ page }) => {
     const pedidos: string[] = []
     page.on('request', (r) => {

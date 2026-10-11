@@ -163,7 +163,7 @@ Digitar na busca e rolar não contam.
 | Encaixar reposição | 5 | **Alunos**, **Reposições**, **Encaixar**, a aula, confirmar; ou na chamada: **Avisou**, **Encaixar em outro horário**, a aula, confirmar |
 | O aluno remarca a própria aula | 5 | **Não vou poder ir**, **Avisar que não vou**, **reposições para marcar**, a aula, **Confirmar reposição** |
 | Registrar quem pediu a aula experimental | 5 | Hoje: **Registrar aula experimental**, a aula, Nome, WhatsApp, **Registrar** |
-| Importar 30 alunos de uma planilha | 2 a 7 depois de colar | **Conferir**, **Importar**; corrigir uma linha são 3 (a linha, o campo, **Salvar correção**), tirar uma são 2 (a linha, **Tirar da lista**) |
+| Importar 30 alunos de uma planilha | 2 depois de colar; 7 corrigindo uma linha e tirando outra | **Conferir**, **Importar**; corrigir uma linha são 3 (a linha, o campo, **Salvar correção**), tirar uma são 2 (a linha, **Tirar da lista**) |
 | Visitante pede a aula experimental | 1 a 3 | **Falar no WhatsApp**; ou **Ver os horários com vaga**, o horário, **Pedir no WhatsApp** |
 
 ### Quem vê o quê
